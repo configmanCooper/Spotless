@@ -92,7 +92,7 @@ export default function makeScene() {
         { name: 'loadbread', after: ['bread'], clue: toaster },
         { name: 'arm', after: ['battery'], clue: detector },
         { name: 'burn', after: ['plugin', 'loadbread', 'arm'], clue: toaster,
-          onAdvance: (a) => { a.narrator.say('os_fire', { category: 'VOICE' }); a.narrator.say('s3_solve', { category: 'STORY' }); a.toast('Vents and windows bang open.'); a.solve(); } },
+          onAdvance: (a) => { a.fx.smoke({ x: -3, y: 1.3, z: -4 }); a.cameraImpulse(0.4); a.narrator.say('os_fire', { category: 'VOICE' }); a.narrator.say('s3_solve', { category: 'STORY' }); a.toast('Vents and windows bang open.'); a.solve(); } },
       ]);
       this._ch = ch;
 

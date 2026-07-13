@@ -83,6 +83,7 @@ class Game {
   _setSetting(k, v) {
     this.settings[k] = v; this.save.save(this.state);
     if (k.startsWith('sub')) this.ui.applySubtitleSettings(this.settings);
+    if (k === 'reducedMotion') { this.world.reducedMotion = !!v; document.documentElement.classList.toggle('reduced-motion', !!v); }
   }
 
   _disposeGroup(group) { try { disposeGroup(group); } catch {} }
@@ -161,6 +162,7 @@ class Game {
       onCredits: () => this._runCredits(),
       setSpatialSource: (p) => this.audio.setSpatialSource(p, this.renderer.camera),
       setExposureScale: (s) => this.renderer.setExposureScale(s),
+      cameraBeat: (o) => this.rig.beat(o),
       examine: (content) => this._examine(content),
       checkpoint: (name, payload) => this._saveCheckpoint(name, payload),
       memory: {
@@ -172,6 +174,13 @@ class Game {
 
     const pal = PALETTES[this.scene.palette] || PALETTES.party;
     this.renderer.setPalette(pal);
+    // feed the scene accent/warm into CSS vars for per-scene UI identity (plan §3 UI)
+    const hex = (n) => '#' + (n >>> 0).toString(16).padStart(6, '0').slice(-6);
+    const rootStyle = document.documentElement.style;
+    rootStyle.setProperty('--scene-accent', hex(pal.accent));
+    rootStyle.setProperty('--scene-warm', hex(pal.warm));
+    this.world.reducedMotion = !!this.settings.reducedMotion;
+    document.documentElement.classList.toggle('reduced-motion', !!this.settings.reducedMotion);
     this.audio.setRoomTone(this.scene.roomTone || 'room');
 
     this.scene.build(this.api);

@@ -34,6 +34,7 @@ export default function makeScene() {
       this.bay1Fused = false; this.cageOpen = false;
       api.floor(36, 0x1c2320);
       api.bounds(-11, 11, -8, 8);
+      api.fx.motes({ count: 60, area: [20, 5, 14], center: [0, 2.3, 0], color: 0xbfe0d4, opacity: 0.18, size: 0.05 });
       api.wall(0, -8, 24, 0.3, 0x2a322e); api.wall(-11, 0, 0.3, 16, 0x2a322e); api.wall(11, 0, 0.3, 16, 0x2a322e);
 
       // Bay 1 / Bay 2 + posters
@@ -129,7 +130,7 @@ export default function makeScene() {
 
       api.use({ id: 'grinder', mesh: grinder, pos: new THREE.Vector3(8, 0.9, 3), reach: 1.8, prompt: 'grind the chip notch',
         available: () => ch.ready('grind'),
-        onUse: (a) => { if (a.world.carry && a.world.carry.entity.id === 'chip') { this._chipEnt.ground = true; a.audio.sfx('thunk'); ch.advance('grind'); } else a.narrator.line('The grinder wants the chip in hand.', { id: 's9_grindempty', category: 'REACT' }); } });
+        onUse: (a) => { if (a.world.carry && a.world.carry.entity.id === 'chip') { this._chipEnt.ground = true; a.audio.sfx('thunk'); a.fx.sparks({ x: 8, y: 1.1, z: 3 }); a.cameraImpulse(0.35); ch.advance('grind'); } else a.narrator.line('The grinder wants the chip in hand.', { id: 's9_grindempty', category: 'REACT' }); } });
 
       // the vacuum: accepts chip / barcode / ballast; also pickable for docking
       this._vacEnt = api.use({

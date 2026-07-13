@@ -14,6 +14,7 @@ export default function makeScene() {
     build(api) {
       const pal = { ground: 0x2b2530, wall: 0x4a3d4a, house: 0x5a4a56 };
       api.floor(60, pal.ground);
+      api.fx.motes({ count: 55, area: [16, 4, 12], center: [1, 2, 0], color: 0xf6d9b0, opacity: 0.16, size: 0.045 });
       // a warm rug under the living room
       const rug = new THREE.Mesh(new THREE.CircleGeometry(3.2, 24), P.mat(0x6a3a4a, { rough: 1, edges: false })); rug.rotation.x = -Math.PI / 2; api.prop(rug, 2.5, 0.012, 1.5);
       // yard/road strip to the south is a lighter ground

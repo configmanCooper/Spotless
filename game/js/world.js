@@ -31,7 +31,21 @@ export class World {
 
     this.enabled = true;       // disabled during cutscenes
     this.onInteractResult = null; // optional scene callback
+    // ---- hand-authored animation state (plan §3 character animation) ----
+    this._reachT = 0;          // arm-reach pulse timer (pick/place/clean)
+    this._idleP = 0;           // idle servo phase
+    this._cleanPose = 0;       // 0..1 eased cleaning lean
+    this.reducedMotion = false;
   }
+
+  // ease an angle toward a target along the shortest path
+  _approachAngle(cur, tgt, k) {
+    let d = tgt - cur;
+    while (d > Math.PI) d -= Math.PI * 2;
+    while (d < -Math.PI) d += Math.PI * 2;
+    return cur + d * Math.min(1, k);
+  }
+  reach() { this._reachT = 0.42; }   // trigger an arm-reach pulse
 
   setScreen(text, color) {
     this.screenText = text;
@@ -75,6 +89,7 @@ export class World {
     mesh.position.set(0, 0, 0); mesh.rotation.set(0, 0, 0);
     this.carry = { entity, mesh, origParent };
     entity.carried = true;
+    this.reach();
     this.audio?.sfx('pick');
     this.ui.toast('Picked up: ' + this._itemName(entity) + '  ·  Q to drop', 2200);
     return true;
@@ -94,6 +109,7 @@ export class World {
     mesh.position.copy(wp); mesh.position.y = entity.dropY ?? 0.2;
     entity.carried = false;
     this.carry = null;
+    this.reach();
     this.audio?.sfx('place');
   }
   // Q key: drop whatever we're holding
@@ -141,7 +157,8 @@ export class World {
       this.nav.move(p, mx * sp, mz * sp, CONFIG.DUST_RADIUS);
       this.facing = Math.atan2(mx, mz);
     }
-    this.dust.rotation.y = this.facing;
+    // smooth turning rather than snap rotation (plan §3 character animation)
+    this.dust.rotation.y = this._approachAngle(this.dust.rotation.y, this.facing, dt * 11);
 
     // interaction handling
     const near = this.interact.nearest(p);
@@ -188,7 +205,9 @@ export class World {
 
   _doClean(entity, api) {
     this.addTrash(entity.trashAmount ?? 0.08);
+    this.reach();
     this.audio?.sfx('clean');
+    if (api && api.fx) api.fx.puff(entity.pos || (entity.mesh && entity.mesh.position));
     if (entity.onClean) entity.onClean(api, entity);
     if (entity.removeOnClean !== false) {
       entity.mesh && entity.mesh.parent && entity.mesh.parent.remove(entity.mesh);
@@ -222,5 +241,36 @@ export class World {
     // gentle servo bob while moving
     this._bob += dt * (moving ? 10 : 3);
     this.dust.position.y = moving ? Math.abs(Math.sin(this._bob)) * 0.03 : 0;
+
+    const r = this.rig; if (!r) return;
+    const armL = r.arms && r.arms.l, armR = r.arms && r.arms.r, head = r.head;
+    // cleaning lean eases in while cleaning, out otherwise
+    const targetPose = this.cleaning ? 1 : 0;
+    this._cleanPose += (targetPose - this._cleanPose) * Math.min(1, dt * 8);
+    // arm-reach pulse (pick / place / clean): a quick forward swing that decays
+    if (this._reachT > 0) this._reachT = Math.max(0, this._reachT - dt);
+    const reach = this._reachT > 0 ? Math.sin((0.42 - this._reachT) / 0.42 * Math.PI) : 0;
+
+    if (this.reducedMotion) {
+      if (armL) armL.rotation.x = 0; if (armR) armR.rotation.x = 0;
+      if (head) { head.rotation.y = 0; head.rotation.x = 0; }
+      this.dust.rotation.x = 0;
+      return;
+    }
+
+    // idle servo shift + occasional head sway when standing still
+    this._idleP += dt * (moving ? 3 : 1.1);
+    const idle = moving || this.cleaning ? 0 : (Math.sin(this._idleP * 0.7) * 0.5 + 0.5);
+    // arms: reach forward (pick/place) and drop into a cleaning pose
+    const armFwd = -reach * 1.1 - this._cleanPose * 0.5;
+    if (armL) armL.rotation.x = armFwd + idle * 0.04;
+    if (armR) armR.rotation.x = armFwd - idle * 0.04;
+    // head: sway gently while idle, dip while cleaning
+    if (head) {
+      head.rotation.y = idle * Math.sin(this._idleP * 0.5) * 0.16;
+      head.rotation.x = this._cleanPose * 0.22 + idle * 0.03;
+    }
+    // torso lean forward while cleaning
+    this.dust.rotation.x = this._cleanPose * 0.14;
   }
 }

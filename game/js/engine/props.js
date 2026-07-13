@@ -24,7 +24,7 @@ export function disposeGroup(root) {
   if (!root) return;
   const seenMat = new Set(), seenGeo = new Set();
   root.traverse((o) => {
-    if (o.geometry && !seenGeo.has(o.geometry)) { seenGeo.add(o.geometry); try { o.geometry.dispose(); } catch {} }
+    if (o.geometry && !o.geometry.userData?.shared && !seenGeo.has(o.geometry)) { seenGeo.add(o.geometry); try { o.geometry.dispose(); } catch {} }
     const mats = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
     for (const m of mats) {
       if (!m || m.userData?.shared || seenMat.has(m)) continue;

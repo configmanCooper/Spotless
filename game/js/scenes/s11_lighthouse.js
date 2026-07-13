@@ -23,6 +23,7 @@ export default function makeScene() {
       this._phase = 'climb';
       api.floor(24, 0x14161f);
       api.bounds(-6, 6, -6, 46);
+      api.fx.motes({ count: 90, area: [10, 44, 10], center: [0, 6, 20], color: 0xffe3a8, opacity: 0.16, size: 0.05 });
       api.setAmbient(0.5);
       api.world.lampDrains = true; api.world.lampBattery = 1; api.world.setLampKnown(true); api.ui.setLampGlyph('known');
 
@@ -259,6 +260,9 @@ export default function makeScene() {
       // the beam catches — you are the missing part; then the spatial reveal
       this._phase = 'reveal';
       this._lampMesh.material.emissive.setHex(0xffd777); this._lampMesh.material.emissiveIntensity = 2; this._beam.intensity = 8;
+      // fake volumetric beam sweeping out over the water (plan §3 effects)
+      api.fx.beam({ x: 0, y: 2.6, z: 44 }, { x: 0, y: 8, z: 20 }, { color: 0xffe3a8, radius: 1.6, opacity: 0.16 });
+      api.cameraImpulse(0.6);
       doors.lamp.userData.open();
       api.narrator.mode = 'spatial';
       // ground the voice at the old robot by the light (Phase 1 spatial hookup)

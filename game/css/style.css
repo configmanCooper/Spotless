@@ -148,3 +148,14 @@ html,body{ margin:0; height:100%; background:#0d0b14; overflow:hidden; }
 .examine-card .ex-line{ }
 .examine-card .ex-hint{ margin-top:18px; font-size:.8em; letter-spacing:.14em;
   text-transform:uppercase; color:var(--dim); opacity:.7; }
+
+/* Phase 4 UI: vector lamp icon, tap/hold prompt, focus states, palette accent */
+.lamp-glyph{ display:inline-flex; align-items:center; color:#cfc9bd; }
+.lamp-glyph svg{ display:block; }
+#prompt.is-hold .key{ border-radius:50%; }
+#prompt.is-hold{ border-color: color-mix(in srgb, var(--scene-accent,#7fd7ff) 45%, rgba(255,255,255,.12)); }
+#prompt.is-tap .key{ border-radius:4px; }
+.chip.task{ border-left:3px solid var(--scene-accent, transparent); }
+.btn:focus-visible, .seg button:focus-visible, .menu-list button:focus-visible{
+  outline:2px solid var(--scene-accent,#7fd7ff); outline-offset:2px; }
+:root.reduced-motion *{ transition:none !important; animation:none !important; }

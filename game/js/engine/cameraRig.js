@@ -15,7 +15,14 @@ export class CameraRig {
     this.active = null;
     this._pos = new THREE.Vector3();
     this.snapNext = true;
+    this._pushT = 0; this._pushAmt = 0; this._pushHold = 0;   // recognition push
+    this._impulse = 0;                                        // machinery shake
   }
+
+  // authored beats (plan §3): a brief closer framing, or a small shake
+  push(amount = 1.4, hold = 1.6) { this._pushAmt = amount; this._pushHold = hold; this._pushT = 0; }
+  impulse(strength = 0.5) { this._impulse = Math.max(this._impulse, strength); }
+  beat(o) { if (!o) return; if (o.push != null) this.push(o.push, o.hold ?? 1.6); if (o.impulse != null) this.impulse(o.impulse); }
 
   setAnchors(anchors) {
     this.anchors = anchors && anchors.length ? anchors : [{ cx: 0, cz: 0, dist: this.dist }];
@@ -38,7 +45,15 @@ export class CameraRig {
     const a = this._pickAnchor(dustPos);
     if (a) this.active = a;
     const anc = this.active || { cx: 0, cz: 0, dist: this.dist };
-    const dist = anc.dist || this.dist;
+    let dist = anc.dist || this.dist;
+
+    // recognition push: ease the framing closer for a beat, then back out
+    if (this._pushHold > 0 || this._pushT < 1) {
+      this._pushT += dt / Math.max(0.3, (this._pushHold || 1) + 0.8);
+      const env = Math.sin(Math.min(1, this._pushT) * Math.PI);   // 0→1→0
+      dist -= (anc.dist || this.dist) * 0.16 * this._pushAmt * env;
+      if (this._pushT >= 1) { this._pushHold = 0; this._pushAmt = 0; }
+    }
 
     // desired look-at: bias toward Dust but clamp within the anchor's soft bounds
     let tx = dustPos.x, tz = dustPos.z;
@@ -55,7 +70,14 @@ export class CameraRig {
     // place camera behind/above at fixed tilt (looking down toward -Z world)
     const back = Math.cos(this.tilt) * dist;
     const up = Math.sin(this.tilt) * dist;
-    this._pos.set(this._cur.x, up, this._cur.z + back);
+    // machinery impulse: a small decaying positional shake
+    let sx = 0, sy = 0;
+    if (this._impulse > 0.001) {
+      sx = (Math.random() - 0.5) * this._impulse * 0.5;
+      sy = (Math.random() - 0.5) * this._impulse * 0.5;
+      this._impulse *= Math.max(0, 1 - dt * 6);
+    }
+    this._pos.set(this._cur.x + sx, up + sy, this._cur.z + back);
     this.camera.position.copy(this._pos);
     this.camera.lookAt(this._cur.x, 0.6, this._cur.z);
     this.snapNext = false;

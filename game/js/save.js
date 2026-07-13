@@ -10,7 +10,7 @@ const DEFAULT = {
   checkpoint: null,      // { scene, milestone, payload } — bounded mid-scene checkpoint (plan §2)
   solveTimes: {},        // sceneId -> {solveTime, hints}
   scenesDone: [],
-  settings: { hints: 'normal', subs: true, master: 0.9, assist: false,
+  settings: { hints: 'normal', subs: true, master: 0.9, assist: false, reducedMotion: false,
     subSize: 'normal', subSpeed: 'normal', subOpacity: 'normal', subContrast: false },
 };
 

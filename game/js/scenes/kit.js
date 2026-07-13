@@ -8,6 +8,7 @@
 //   per-step mercy shimmer that actually fires on the current step's clue.
 import * as THREE from 'three';
 import * as P from '../engine/props.js';
+import { makeFx } from '../engine/fx.js';
 
 export { THREE, P };
 
@@ -57,6 +58,7 @@ export function createApi(core, group, onSolve) {
     solve() {
       if (api.solved) return;
       api.solved = true;
+      api.cameraPush(1.2, 2.0);
       api.hints && api.hints.markSolved();
       onSolve && onSolve();
     },
@@ -239,7 +241,7 @@ export function createApi(core, group, onSolve) {
           if (!s || s.done || !s.after.every(a => ch.done(a))) return false;
           s.done = true;
           api.hints && api.hints.progress();
-          if (s.beat && !opts.silent) api.narrator.say(s.beat, { category: 'STORY' });
+          if (s.beat && !opts.silent) { api.narrator.say(s.beat, { category: 'STORY' }); api.cameraPush(0.85, 1.3); }
           if (s.onAdvance) s.onAdvance(api, opts);
           const cur = ch.current();
           api._setStepClue(cur ? steps.get(cur).clue : null);
@@ -267,7 +269,13 @@ export function createApi(core, group, onSolve) {
       api._firstStep = cur;
       return ch;
     },
+
+    // ---- camera beats (plan §3 camera language) — a scene requests a brief
+    // authored push or impulse; main applies it to the rig. ----
+    cameraPush(amount = 1.4, hold = 1.6) { core.cameraBeat && core.cameraBeat({ push: amount, hold }); },
+    cameraImpulse(strength = 0.5) { core.cameraBeat && core.cameraBeat({ impulse: strength }); },
   };
+  api.fx = makeFx(api);
   return api;
 }
 

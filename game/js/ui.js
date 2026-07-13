@@ -12,7 +12,7 @@ export class UI {
         <div class="row"><div class="chip task"><b>TASK</b> <span id="task">—</span></div></div>
         <div class="row">
           <div class="chip"><div id="battery"><i></i></div>
-            <span class="lamp-glyph" id="lampglyph" title="Lamp">💡</span></div>
+            <span class="lamp-glyph" id="lampglyph" title="Lamp"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 21h6v-1H9v1zm3-19a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z" fill="currentColor"/></svg></span></div>
           <div class="chip" id="trash"><span>TRASH</span><div id="trashbar"><i></i></div></div>
         </div>
       </div>
@@ -100,7 +100,9 @@ export class UI {
   setPrompt(text, mode = 'tap') {
     if (!text) { this.promptEl.classList.remove('show'); return; }
     this.promptEl.classList.add('show');
-    this.promptKey.textContent = mode === 'hold' ? 'E' : 'E';
+    this.promptEl.classList.toggle('is-hold', mode === 'hold');
+    this.promptEl.classList.toggle('is-tap', mode !== 'hold');
+    this.promptKey.textContent = 'E';
     this.promptTxt.textContent = (mode === 'hold' ? 'Hold — ' : '') + text;
   }
 
@@ -158,6 +160,7 @@ export class UI {
         <div class="opt"><span>Reading speed</span>${seg('subSpeed', ['slow', 'normal', 'fast'], settings.subSpeed || 'normal')}</div>
         <div class="opt"><span>Subtitle background</span>${seg('subOpacity', ['low', 'normal', 'high'], settings.subOpacity || 'normal')}</div>
         <div class="opt"><span>High contrast</span>${seg('subContrast', ['on', 'off'], settings.subContrast ? 'on' : 'off')}</div>
+        <div class="opt"><span>Reduced motion</span>${seg('reducedMotion', ['on', 'off'], settings.reducedMotion ? 'on' : 'off')}</div>
       </div>
       <button class="btn" id="s-back">Back</button>`;
     this.pauseEl.querySelectorAll('.seg button').forEach(b => b.onclick = () => {
@@ -165,6 +168,7 @@ export class UI {
       if (k === 'subs') v = (v === 'on');
       if (k === 'subContrast') v = (v === 'on');
       if (k === 'assist') v = (v === 'on');
+      if (k === 'reducedMotion') v = (v === 'on');
       onChange(k, v);
       b.parentElement.querySelectorAll('button').forEach(x => x.classList.remove('sel'));
       b.classList.add('sel');
