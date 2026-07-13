@@ -18,12 +18,41 @@ export function createApi(core, group, onSolve) {
     narrator: core.narrator, hints: core.hints, audio: core.audio, ui: core.ui,
     memory: core.memory || { get: () => undefined, set: () => {} },
     get camera() { return core.getCamera ? core.getCamera() : null; },
+    get assist() { return !!(core.settings && core.settings.assist); },
+    // widen a timing window when Assist is on (plan §2 timing accessibility)
+    assistWindow(base) { return base * (this.assist ? 1.6 : 1); },
     flags: {},
     solved: false,
     _updaters: [],
     _shimmerList: [],
     _shimmerActive: false,
     _stepClueMesh: null,
+    _telemetry: { wrong: 0, drops: 0, examines: 0, reloads: 0 },
+
+    // ---- Examine / Observe (plan §2): a focused close-up read of an object,
+    // entered and exited with the same one Interact verb. Content is
+    // { title, lines:[], accent? }.
+    examine(def) {
+      const content = { title: def.title, lines: def.lines || [], accent: def.accent };
+      return api.use({
+        id: def.id, mesh: def.mesh, pos: def.pos || (def.mesh && def.mesh.position), reach: def.reach ?? 1.9,
+        available: def.available, prompt: def.prompt || 'examine',
+        onUse: (a) => {
+          api._telemetry.examines++;
+          // face the object, then open the close-up
+          if (def.mesh || def.pos) {
+            const p = def.pos || def.mesh.position;
+            const d = a.world.dust.position;
+            a.world.facing = Math.atan2(p.x - d.x, p.z - d.z);
+          }
+          core.examine && core.examine(content);
+          def.onExamine && def.onExamine(a);
+        },
+      });
+    },
+    checkpoint(name, payload) { core.checkpoint && core.checkpoint(name, payload); },
+    // open a close-up imperatively (for objects that already own an Interact verb)
+    openExamine(content) { api._telemetry.examines++; core.examine && core.examine(content); },
 
     solve() {
       if (api.solved) return;
@@ -47,6 +76,7 @@ export function createApi(core, group, onSolve) {
     nudge(id, opts = {}) { return api.narrator.say(id, Object.assign({ category: 'HINT', cooldown: opts.cooldown ?? 22 }, opts)); },
     wrongTry(kind, nudgeId, opts = {}) {
       const after = opts.after ?? 3;
+      api._telemetry.wrong++;
       api._wrongCounts[kind] = (api._wrongCounts[kind] || 0) + 1;
       if (api._wrongCounts[kind] >= after) { api._wrongCounts[kind] = 0; return api.nudge(nudgeId, { cooldown: opts.cooldown ?? 25 }); }
       return false;
@@ -204,17 +234,30 @@ export function createApi(core, group, onSolve) {
         allDone() { return order.every(n => steps.get(n).done); },
         progressCount() { return order.filter(n => steps.get(n).done).length; },
         total: order.length,
-        advance(n) {
+        advance(n, opts = {}) {
           const s = steps.get(n);
           if (!s || s.done || !s.after.every(a => ch.done(a))) return false;
           s.done = true;
           api.hints && api.hints.progress();
-          if (s.beat) api.narrator.say(s.beat, { category: 'STORY' });
-          if (s.onAdvance) s.onAdvance(api);
+          if (s.beat && !opts.silent) api.narrator.say(s.beat, { category: 'STORY' });
+          if (s.onAdvance) s.onAdvance(api, opts);
           const cur = ch.current();
           api._setStepClue(cur ? steps.get(cur).clue : null);
           api.hints && api.hints.setPool(cur || '__done');
           return true;
+        },
+        // deterministically re-apply milestone steps on checkpoint reload, in
+        // dependency order, without replaying STORY beats (plan §2 checkpoints).
+        restore(names) {
+          const want = new Set(names || []);
+          let guard = 0;
+          while (guard++ < order.length + 2) {
+            let progressed = false;
+            for (const n of order) {
+              if (want.has(n) && !steps.get(n).done && ch.ready(n)) { ch.advance(n, { silent: true, restore: true }); progressed = true; }
+            }
+            if (!progressed) break;
+          }
         },
       };
       api._chain = ch;

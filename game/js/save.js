@@ -7,9 +7,10 @@ const DEFAULT = {
   flags: {},
   linesHeard: [],
   memoryLog: [],         // rolling STORY/VOICE transcript (plan §1 memory panel)
+  checkpoint: null,      // { scene, milestone, payload } — bounded mid-scene checkpoint (plan §2)
   solveTimes: {},        // sceneId -> {solveTime, hints}
   scenesDone: [],
-  settings: { hints: 'normal', subs: true, master: 0.9,
+  settings: { hints: 'normal', subs: true, master: 0.9, assist: false,
     subSize: 'normal', subSpeed: 'normal', subOpacity: 'normal', subContrast: false },
 };
 

@@ -29,6 +29,7 @@ export class UI {
       <div id="debug"></div>
       <div id="title" class="screen"></div>
       <div id="pause" class="screen hidden"></div>
+      <div id="examine" class="screen hidden"></div>
       <div id="credits"></div>
     `;
     this.$ = (id) => root.querySelector(id);
@@ -42,6 +43,7 @@ export class UI {
     this.toastEl = this.$('#toast'); this.fadeEl = this.$('#fade');
     this.debugEl = this.$('#debug');
     this.titleEl = this.$('#title'); this.pauseEl = this.$('#pause'); this.creditsEl = this.$('#credits');
+    this.examineEl = this.$('#examine');
     this._v = new THREE.Vector3();
     this.setHudVisible(false);
   }
@@ -150,6 +152,7 @@ export class UI {
       <div class="settings">
         <h3>SETTINGS</h3>
         <div class="opt"><span>Hints</span>${seg('hints', ['normal', 'patient', 'off'], settings.hints)}</div>
+        <div class="opt"><span>Assist timing</span>${seg('assist', ['on', 'off'], settings.assist ? 'on' : 'off')}</div>
         <div class="opt"><span>Subtitles</span>${seg('subs', ['on', 'off'], settings.subs ? 'on' : 'off')}</div>
         <div class="opt"><span>Subtitle size</span>${seg('subSize', ['small', 'normal', 'large'], settings.subSize || 'normal')}</div>
         <div class="opt"><span>Reading speed</span>${seg('subSpeed', ['slow', 'normal', 'fast'], settings.subSpeed || 'normal')}</div>
@@ -161,6 +164,7 @@ export class UI {
       const k = b.dataset.k; let v = b.dataset.v;
       if (k === 'subs') v = (v === 'on');
       if (k === 'subContrast') v = (v === 'on');
+      if (k === 'assist') v = (v === 'on');
       onChange(k, v);
       b.parentElement.querySelectorAll('button').forEach(x => x.classList.remove('sel'));
       b.classList.add('sel');
@@ -220,6 +224,37 @@ export class UI {
     this.$('#mem-back').onclick = () => { this.pauseEl.classList.add('hidden'); onBack && onBack(); };
   }
   _esc(s) { return String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])); }
+
+  // Examine / Observe close-up (plan §2). Same Interact verb exits.
+  showExamine(content, onExit) {
+    const el = this.examineEl;
+    el.classList.remove('hidden');
+    const acc = content.accent || '#7fe0ff';
+    const lines = (content.lines || []).map(l => `<div class="ex-line">${this._esc(l)}</div>`).join('');
+    el.innerHTML = `
+      <div class="examine-card" style="--acc:${acc}">
+        <div class="ex-title">${this._esc(content.title || 'Examine')}</div>
+        <div class="ex-body">${lines}</div>
+        <div class="ex-hint">Interact to step back</div>
+      </div>`;
+    let done = false;
+    const close = () => {
+      if (done) return; done = true;
+      removeEventListener('keydown', onKey, true);
+      el.removeEventListener('pointerdown', onClick);
+      el.classList.add('hidden');
+      onExit && onExit();
+    };
+    const onKey = (e) => {
+      const k = e.key.toLowerCase();
+      if (['e', 'f', ' ', 'enter', 'escape'].includes(k)) { e.preventDefault(); e.stopImmediatePropagation(); close(); }
+    };
+    const onClick = () => close();
+    addEventListener('keydown', onKey, true);
+    el.addEventListener('pointerdown', onClick);
+    this._examineClose = close;
+  }
+  hideExamine() { if (this._examineClose) this._examineClose(); else this.examineEl.classList.add('hidden'); }
 
   // Apply subtitle accessibility settings (size / speed / opacity / contrast).
   applySubtitleSettings(s) {

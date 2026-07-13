@@ -85,7 +85,7 @@ export default function makeScene() {
         { name: 'crane', after: ['estop'], clue: cab, beat: 's8_step_crane' },
         { name: 'fuelcutoff', after: ['crane'], clue: cutoff, beat: 's8_step_fuelcutoff', onAdvance: () => { this.genDead = true; this._restartT = -1; } },
         { name: 'tag', after: ['crane'], clue: board },
-        { name: 'lockout', after: ['tag', 'fuelcutoff'], clue: breaker, beat: 's8_step_lockout', onAdvance: () => { this.lockedOut = true; } },
+        { name: 'lockout', after: ['tag', 'fuelcutoff'], clue: breaker, beat: 's8_step_lockout', onAdvance: (a, opts) => { this.lockedOut = true; if (!opts || !opts.silent) a.checkpoint('lockout', { steps: a._chain.order.filter(n => a._chain.done(n)) }); } },
         { name: 'gate', after: ['lockout'], clue: gate },
         { name: 'clearheap', after: ['gate'], clue: heap },
         { name: 'core', after: ['clearheap'], clue: core },
@@ -177,6 +177,17 @@ export default function makeScene() {
         if (this._restartT <= 0) { this._restartT = 20; this.beltStopped = false; api.narrator.say('s8_restart', { category: 'VOICE' }); }
       }
       if (this._shipWindow > 0) this._shipWindow -= dt;
+    },
+
+    // Deterministic reload from the permanent-lockout milestone (plan §2).
+    restoreCheckpoint(api, cp) {
+      if (cp.milestone !== 'lockout') return;
+      api._chain.restore((cp.payload && cp.payload.steps) || []);
+      this.beltStopped = true; this.genDead = true; this.lockedOut = true; this._restartT = -1;
+      // hide any barrels the crane had already cleared (cosmetic parity)
+      this._barrels.forEach(b => { if (b.mesh) { b.cleared = true; b.mesh.visible = false; } });
+      api.world.dust.position.set(3, 0, 5);
+      api.toast('Restored: the line is locked out. The walkway gate is ahead.', 3200);
     },
   };
 }

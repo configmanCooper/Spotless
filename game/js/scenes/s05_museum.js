@@ -48,6 +48,14 @@ export default function makeScene() {
       const panelMesh = P.box(0.34, 0.34, 0.06, 0x6a7080, { metal: 0.4 }); api.prop(panelMesh, 9, 1.5, -6.4);
       // three install slots (hidden until panel open)
       const socketMesh = P.box(0.5, 0.14, 0.1, 0x151820, { emissive: 0x223040 }); socketMesh.visible = false; api.prop(socketMesh, 9, 1.5, -6.42);
+      // three socket indicator lamps that light as HAND / RIBBON / FUSE seat
+      // (plan §2 state feedback: empty sockets visibly fill)
+      this._socketLamps = [];
+      for (let i = 0; i < 3; i++) {
+        const s = P.box(0.1, 0.1, 0.05, 0x1a2028, { emissive: 0x112028, emissiveIntensity: 0.6, edges: false });
+        s.visible = false; api.prop(s, 8.76 + i * 0.24, 1.5, -6.35);
+        this._socketLamps.push(s);
+      }
       const grime = P.mess('crumb', 0x5a6a4a); grime.visible = false; grime.position.set(9, 1.5, -6.36); api.group.add(grime);
 
       // ART wing: the manipulator hand in an alarmed case
@@ -112,7 +120,8 @@ export default function makeScene() {
         available: () => ch.ready('hand'),
         onUse: (a) => {
           if (!this.artDisarmed) { a.audio.sfx('error'); a.narrator.say('s5_alarmed', { category: 'REACT' }); return; }
-          if (this._guard.isNear(new THREE.Vector3(-9, 0, 6), 4)) { a.audio.sfx('error'); a.narrator.say('s5_guardcaught', { category: 'VOICE' }); return; }
+          const catchR = a.assist ? 2.6 : 4;   // Assist widens the guard window (plan §2)
+          if (this._guard.isNear(new THREE.Vector3(-9, 0, 6), catchR)) { a.audio.sfx('error'); a.narrator.say('s5_guardcaught', { category: 'VOICE' }); return; }
           a.world.pickUp(this._handEnt); ch.advance('hand');
         },
       });
@@ -161,6 +170,18 @@ export default function makeScene() {
       api.narrator.say('curator_1', { category: 'VOICE' });
     },
 
-    update() {},
+    update(dt, api) {
+      if (this._socketLamps) {
+        const done = [this._ch.done('inst_hand'), this._ch.done('inst_ribbon'), this._ch.done('inst_fuse')];
+        this._socketLamps.forEach((s, i) => {
+          s.visible = this.panelOpen;
+          if (done[i] && !s.userData.on) {
+            s.userData.on = true;
+            s.material = P.mat(0x3fbf6a, { emissive: 0x1a6a34, emissiveIntensity: 1.2, edges: false });
+            api.audio.sfx('place');
+          }
+        });
+      }
+    },
   };
 }

@@ -79,8 +79,18 @@ export default function makeScene() {
       // letter: read, then accept corner / tape / stamp; finally mailable
       const letterEnt = api.use({
         id: 'letter', mesh: letter, pos: letter.position, reach: 1.6, dropY: 1.0, pickable: false,
-        prompt: () => letter.userData.ready ? 'take the finished letter' : 'the handwritten letter',
-        onUse: (a) => { if (ch.ready('readletter')) { a.narrator.line('The hand loops hard to the left — unmistakable.', { id: 's2_hand', category: 'REACT' }); ch.advance('readletter'); } },
+        prompt: () => letter.userData.ready ? 'take the finished letter' : (ch.done('readletter') ? 'examine the handwriting' : 'the handwritten letter'),
+        onUse: (a) => {
+          if (ch.ready('readletter')) { a.narrator.line('The hand loops hard to the left — unmistakable.', { id: 's2_hand', category: 'REACT' }); ch.advance('readletter'); }
+          else if (ch.done('readletter') && !letter.userData.ready && !a.world.carry) {
+            a.openExamine({ title: 'The unsent apology', accent: '#bcd08a', lines: [
+              'The letter is whole but for one corner, torn clean away.',
+              'The hand loops hard to the left — pressed deep, angry once, then softened.',
+              'Whatever came out of the shredder in this same hand belongs here.',
+              'The other corners are in other hands. They are not part of this.',
+            ] });
+          }
+        },
         acceptCarry: (item, a) => {
           if (item.id === 'fragment_2' && ch.ready('mendfrag')) { torn.material = P.mat(0xf4e8c0); a.audio.sfx('place'); ch.advance('mendfrag'); return true; }
           if (String(item.id).startsWith('fragment')) { a.audio.sfx('error'); a.narrator.say('s2_wrongfrag', { category: 'REACT' }); return false; }

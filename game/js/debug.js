@@ -21,7 +21,7 @@ export class Debug {
     const lines = ['— PLAYTEST (local only) —'];
     if (this._budget) lines.push(this._budget);
     for (const r of this.records) {
-      lines.push(`${r.scene.padEnd(16)} ${(r.solveTime | 0)}s  hints:${r.hints}`);
+      lines.push(`${r.scene.padEnd(15)} ${(r.solveTime | 0)}s h:${r.hints} wr:${r.wrong ?? 0} dr:${r.drops ?? 0} ex:${r.examines ?? 0} rl:${r.reloads ?? 0}`);
     }
     this.el.textContent = lines.join('\n');
   }

@@ -51,7 +51,7 @@ class Game {
     this.input = new Input(this.canvas, () => this.renderer.camera);
     this.input.onLamp = () => this._lamp();
     this.input.onPause = () => this._togglePause();
-    this.input.onDrop = () => { if (this.mode === 'play' && this.world.dropCarried()) this.ui.toast('Dropped.', 1200); };
+    this.input.onDrop = () => { if (this.mode === 'play' && this.world.dropCarried()) { this.ui.toast('Dropped.', 1200); if (this.api && this.api._telemetry) this.api._telemetry.drops++; } };
     this.input.onSelf = () => { if (this.mode === 'play' && this.api) this.api.triggerSelf(); };
 
     this.group = null;         // current scene group
@@ -87,9 +87,29 @@ class Game {
 
   _disposeGroup(group) { try { disposeGroup(group); } catch {} }
 
+  // ---- Examine / Observe overlay (plan §2) ----
+  _examine(content) {
+    if (this.mode !== 'play') return;
+    this.mode = 'examine';
+    this.input.enabled = false;
+    this.audio.sfx('pick');
+    this.ui.showExamine(content, () => {
+      if (this.mode !== 'examine') return;
+      this.mode = 'play'; this.input.enabled = true;
+    });
+  }
+
+  // ---- bounded checkpoints (plan §2) ----
+  _saveCheckpoint(name, payload) {
+    this.state.checkpoint = { scene: this.scene.id, milestone: name, payload: payload || null };
+    this.save.save(this.state);
+  }
+  _clearCheckpoint() { if (this.state.checkpoint) { delete this.state.checkpoint; this.save.save(this.state); } }
+
   _startNew() {
     this.state.scene = 's00_party'; this.state.scenesDone = []; this.state.flags = {};
     this.state.linesHeard = []; this.narrator.setHeard([]);   // fresh narration on New Game
+    if (this.state.checkpoint) delete this.state.checkpoint;
     this.save.save(this.state); this._begin(this.state.scene);
   }
   _continue() { this._begin(this.state.scene || 's00_party'); }
@@ -134,12 +154,15 @@ class Game {
     const core = {
       world: this.world, nav: this.nav, interact: this.interact,
       narrator: this.narrator, hints: this.hints, audio: this.audio, ui: this.ui,
+      settings: this.settings,
       getCamera: () => this.renderer.camera,
       setAnchors: (a) => this.rig.setAnchors(a),
       setAmbient: (v) => this.renderer.setAmbient(v),
       onCredits: () => this._runCredits(),
       setSpatialSource: (p) => this.audio.setSpatialSource(p, this.renderer.camera),
       setExposureScale: (s) => this.renderer.setExposureScale(s),
+      examine: (content) => this._examine(content),
+      checkpoint: (name, payload) => this._saveCheckpoint(name, payload),
       memory: {
         get: (k) => this.state.flags && this.state.flags[k],
         set: (k, v) => { if (!this.state.flags || Array.isArray(this.state.flags)) this.state.flags = {}; this.state.flags[k] = v; this.save.save(this.state); },
@@ -156,20 +179,32 @@ class Game {
     const scale = CONFIG.HINT_SCALE[id] || 1;
     this.hints.begin(this.scene.hints || [], (on) => { this.api.setShimmer(on); }, scale);
     if (this.api._firstStep) this.hints.setPool(this.api._firstStep);
+    // restore a mid-scene checkpoint if one exists for this scene (plan §2)
+    const cp = this.state.checkpoint;
+    if (cp && cp.scene === id && typeof this.scene.restoreCheckpoint === 'function') {
+      try { this.scene.restoreCheckpoint(this.api, cp); this.api._telemetry.reloads++; } catch (e) { console.warn('checkpoint restore failed', e); }
+    }
     this.rig.snapNext = true;
     this._solveHandled = false; this._solveClock = 0;
     this.mode = 'play';
     this.ui.fade(false);
   }
 
+  _telemetryRecord() {
+    const t = (this.api && this.api._telemetry) || {};
+    return Object.assign({}, this.hints.stats(), { wrong: t.wrong | 0, drops: t.drops | 0, examines: t.examines | 0, reloads: t.reloads | 0 });
+  }
+
   _onSceneSolved() {
     if (this._solveHandled) return;
     this._solveHandled = true;
+    this._clearCheckpoint();
     // playtest telemetry (local only)
-    this.debug.record(this.scene.id, this.hints.stats());
+    const rec = this._telemetryRecord();
+    this.debug.record(this.scene.id, rec);
     // persist progress
     if (!this.state.scenesDone.includes(this.scene.id)) this.state.scenesDone.push(this.scene.id);
-    this.state.solveTimes[this.scene.id] = this.hints.stats();
+    this.state.solveTimes[this.scene.id] = rec;
     this.save.save(this.state);
     this.state.linesHeard = this.narrator.getHeard(); this.save.save(this.state);
     // Advance only after the player has had time to read the solve dialog:
@@ -242,6 +277,7 @@ class Game {
   }
 
   _togglePause() {
+    if (this.mode === 'examine') { this.ui.hideExamine(); this.mode = 'play'; this.input.enabled = true; return; }
     if (this.mode === 'play') { this.mode = 'paused'; this.input.enabled = false; this._openPause(); }
     else if (this.mode === 'paused') { this.mode = 'play'; this.input.enabled = true; this.ui.hidePause(); }
   }
@@ -300,7 +336,7 @@ class Game {
       if (this.narrator.mode === 'spatial') this.audio.updateListener(this.renderer.camera);
       if (this.world.lampDrains) this.ui.setBatteryArc(this.world.lampBattery);
       this.rig.update(dt, this.world.dust.position);
-    } else if (this.mode === 'interlude' || this.mode === 'credits' || this.mode === 'title') {
+    } else if (this.mode === 'interlude' || this.mode === 'credits' || this.mode === 'title' || this.mode === 'examine') {
       this.rig.update(dt, this.world.dust.position);
     }
   }

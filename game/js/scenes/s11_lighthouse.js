@@ -28,6 +28,16 @@ export default function makeScene() {
 
       // brass plaque at the entry
       api.prop(P.labelPlaque('LIGHT =\nFIRE + GLASS + TURN', 1.6, 0.7, { bg: '#3a2f14', fg: '#ffd777' }), 0, 1.4, -4.5);
+      // persistent brass diagram: FIRE / GLASS / TURN light as each system is
+      // restored (plan §2 state feedback). Three lamps flank the plaque.
+      const diagPlate = P.box(2.2, 0.5, 0.1, 0x2a2212, { edges: false }); api.prop(diagPlate, 0, 0.7, -4.42);
+      this._diagram = {};
+      [['FIRE', -0.66, 0xff7a3a], ['GLASS', 0, 0x8ab0ff], ['TURN', 0.66, 0xffd777]].forEach(([label, dx, hex]) => {
+        const lamp = P.box(0.13, 0.13, 0.05, 0x33302a, { emissive: 0x0a0906, emissiveIntensity: 0.6, edges: false });
+        api.prop(lamp, dx, 0.72, -4.36);
+        api.prop(P.labelPlaque(label, 0.6, 0.16, { bg: '#2a2212', fg: '#b9a97a', edges: false }), dx, 0.55, -4.34);
+        this._diagram[label] = { lamp, hex, on: false };
+      });
 
       // chamber dividing doors
       const doors = {};
@@ -97,21 +107,21 @@ export default function makeScene() {
         { name: 'c0_pin', clue: pinMesh },
         { name: 'c0_unchain', after: ['c0_pin'], clue: dinghy, onAdvance: () => { hookMesh.visible = true; } },
         { name: 'c0_hook', after: ['c0_unchain'], clue: hookMesh },
-        { name: 'c0_door', after: ['c0_hook'], clue: doorbar, beat: 's11_c0_done', onAdvance: () => { doorbar.visible = false; doors.c1.userData.open(); } },
+        { name: 'c0_door', after: ['c0_hook'], clue: doorbar, beat: 's11_c0_done', onAdvance: (a, opts) => { doorbar.visible = false; doors.c1.userData.open(); this._cp(a, opts, 'c0'); } },
         { name: 'c1_clean', after: ['c0_door'], clue: contacts },
-        { name: 'c1_power', after: ['c1_clean'], clue: powerLever, beat: 's11_c1_done', onAdvance: () => doors.c2.userData.open() },
+        { name: 'c1_power', after: ['c1_clean'], clue: powerLever, beat: 's11_c1_done', onAdvance: (a, opts) => { doors.c2.userData.open(); this._cp(a, opts, 'c1'); } },
         { name: 'c2_letter', after: ['c1_power'], clue: letter2 },
         { name: 'c2_stamp', after: ['c2_letter'], clue: teatin },
-        { name: 'c2_send', after: ['c2_stamp'], clue: chute2, beat: 's11_c2_done', onAdvance: () => doors.c3.userData.open() },
+        { name: 'c2_send', after: ['c2_stamp'], clue: chute2, beat: 's11_c2_done', onAdvance: (a, opts) => { doors.c3.userData.open(); this._cp(a, opts, 'c2'); } },
         { name: 'c3_pendant', after: ['c2_send'], clue: chandelier, onAdvance: () => { pendantMesh.visible = true; } },
         { name: 'c3_p1', after: ['c3_pendant'], clue: prism1 },
         { name: 'c3_p2', after: ['c3_p1'], clue: pendantMesh },
-        { name: 'c3_p3', after: ['c3_p2'], clue: prism3, beat: 's11_c3_done', onAdvance: () => doors.c4.userData.open() },
+        { name: 'c3_p3', after: ['c3_p2'], clue: prism3, beat: 's11_c3_done', onAdvance: (a, opts) => { doors.c4.userData.open(); this._cp(a, opts, 'c3'); } },
         { name: 'c4_hoist', after: ['c3_p3'], clue: gearRing, onAdvance: () => { spareGear.visible = true; } },
         { name: 'c4_pry', after: ['c4_hoist'], clue: jammed, onAdvance: () => { jammed.visible = false; } },
         { name: 'c4_ballast', after: ['c4_pry'], clue: ballastA, onAdvance: () => { greaseMesh.visible = true; } },
         { name: 'c4_grease', after: ['c4_ballast'], clue: greaseMesh },
-        { name: 'c4_gear', after: ['c4_grease'], clue: spareGear, beat: 's11_c4_done', onAdvance: () => doors.c5.userData.open() },
+        { name: 'c4_gear', after: ['c4_grease'], clue: spareGear, beat: 's11_c4_done', onAdvance: (a, opts) => { doors.c5.userData.open(); this._cp(a, opts, 'c4'); } },
         { name: 'c5_recharge', after: ['c4_gear'], clue: trickle },
         { name: 'c5_lampon', after: ['c5_recharge'], clue: null },
         { name: 'c5_cradle', after: ['c5_lampon'], clue: cradle, onAdvance: (a) => this._ignite(a, doors) },
@@ -207,9 +217,42 @@ export default function makeScene() {
     },
 
     update(dt, api) {
+      // persistent FIRE/GLASS/TURN diagram (GLASS=lens loft, TURN=gear deck, FIRE=igniter)
+      if (this._diagram) {
+        const state = { GLASS: this._ch.done('c3_p3'), TURN: this._ch.done('c4_gear'), FIRE: this._ch.done('c5_cradle') };
+        for (const key of ['FIRE', 'GLASS', 'TURN']) {
+          const d = this._diagram[key];
+          if (state[key] && !d.on) {
+            d.on = true;
+            d.lamp.material = P.mat(d.hex, { emissive: d.hex, emissiveIntensity: 1.4, edges: false });
+            api.audio.sfx('lamp_on');
+          }
+        }
+      }
       if (this._phase !== 'climb') return;
       // c5_lampon advances when the player turns the lamp on in C5
       if (this._ch.ready('c5_lampon') && api.world.lampOn) this._ch.advance('c5_lampon');
+    },
+
+    // save a per-chamber checkpoint (plan §2) unless we're mid-restore
+    _cp(api, opts, name) {
+      if (opts && opts.silent) return;
+      api.checkpoint(name, { steps: this._ch.order.filter(n => this._ch.done(n)) });
+    },
+    // deterministic reload from the last cleared chamber
+    restoreCheckpoint(api, cp) {
+      const steps = (cp.payload && cp.payload.steps) || [];
+      api._chain.restore(steps);
+      const ch = this._ch;
+      // the boathook is carried from C0 to C4 — re-grant it if it's still needed
+      if (ch.done('c0_hook') && !ch.done('c4_pry') && this._hookEnt) {
+        this._hookEnt.mesh.visible = true;
+        api.world.pickUp(this._hookEnt);
+      }
+      // stand Dust at the freshly-opened chamber door
+      const doorZ = { c0: 8, c1: 14, c2: 20, c3: 26, c4: 32 }[cp.milestone];
+      if (doorZ != null) api.world.dust.position.set(0, 0, doorZ - 2);
+      api.toast('Restored to the last chamber you cleared.', 3200);
     },
 
     _ignite(api, doors) {
@@ -218,6 +261,8 @@ export default function makeScene() {
       this._lampMesh.material.emissive.setHex(0xffd777); this._lampMesh.material.emissiveIntensity = 2; this._beam.intensity = 8;
       doors.lamp.userData.open();
       api.narrator.mode = 'spatial';
+      // ground the voice at the old robot by the light (Phase 1 spatial hookup)
+      try { api.spatialSource(this._ash.getWorldPosition(new THREE.Vector3())); } catch {}
       if (api.memory.get('gaveBarcode')) api.narrator.say('s11_barcode_beat', { category: 'STORY', spatial: true });
       api.narrator.say('s11_c5_cradle_beat', { category: 'STORY', spatial: true });
       this._ash.rotation.y = 0;

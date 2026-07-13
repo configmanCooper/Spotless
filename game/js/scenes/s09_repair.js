@@ -42,7 +42,25 @@ export default function makeScene() {
       const bay2 = P.box(1.4, 0.2, 1.4, 0x4a3a3a); api.prop(bay2, 3, 0.1, -4);
       api.prop(P.labelPlaque('BAY 2\nSYNC', 1, 0.4, { bg: '#4a3a3a', fg: '#fdd' }), 3, 1.4, -5.4);
       const poster = P.labelPlaque('SYNC = RESTORE\nFACTORY STATE', 1.4, 0.5, { bg: '#e8dcd0', fg: '#6a2a2a' }); api.prop(poster, 5.5, 1.8, -6.7);
-      api.prop(P.labelPlaque('BAY 2 CHECK:\nID · WEIGHT · CHARGE · PAPERWORK', 2, 0.4, { bg: '#e8dcd0', fg: '#4a2a2a' }), 3, 1.1, -6.7);
+      // live Bay-2 checklist: five lamps that turn green as each requirement is met
+      // (plan §2 state feedback) — replaces the old static "remember six conditions" sign
+      const checkPanel = P.box(2.6, 0.7, 0.12, 0x2a2622); api.prop(checkPanel, 3, 1.15, -6.75);
+      api.prop(P.labelPlaque('BAY 2 CHECK', 1.1, 0.2, { bg: '#2a2622', fg: '#e8dcd0', edges: false }), 3, 1.5, -6.68);
+      this._checkLamps = [];
+      const checkDefs = [
+        ['ID', () => this._vacEnt && this._vacEnt.hasChip],
+        ['WEIGHT', () => this._vacEnt && this._vacEnt.ballast >= 2],
+        ['POWER', () => this._vacEnt && this._vacEnt.charged],
+        ['CODE', () => this._vacEnt && this._vacEnt.hasBarcode],
+        ['PAPER', () => this._ch && this._ch.done('paperwork')],
+      ];
+      checkDefs.forEach(([label, test], i) => {
+        const x = 3 + (i - 2) * 0.5;
+        const lamp = P.box(0.16, 0.16, 0.06, 0x552222, { emissive: 0x3a0808, emissiveIntensity: 0.8, edges: false });
+        api.prop(lamp, x, 1.2, -6.68);
+        api.prop(P.labelPlaque(label, 0.46, 0.16, { bg: '#2a2622', fg: '#b7ad9e', edges: false }), x, 0.98, -6.66);
+        this._checkLamps.push({ lamp, test, on: false });
+      });
 
       // refurb unit + chip, service card, bench grinder
       const shelf = P.box(2, 0.2, 0.8, 0x3a3a34); api.prop(shelf, 6, 1.4, 2);
@@ -54,7 +72,7 @@ export default function makeScene() {
       api.prop(P.labelPlaque('BENCH GRINDER', 0.9, 0.2, { bg: '#33403a', fg: '#cde' }), 8, 1.3, 3);
 
       // the shop vacuum (drop-target + pickable) with a port
-      const vac = P.items.vacuum(0x6a7a72); api.prop(vac, -1, 0.4, 3);
+      const vac = P.items.vacuum(0x6a7a72); api.prop(vac, -1, 0.4, 3); this._vac = vac;
       const port = P.box(0.12, 0.12, 0.08, 0x2ad0c0, { emissive: 0x0a3a34 }); port.position.set(0, 0.1, 0.26); vac.add(port);
 
       // ballast, OPEN sign, work order + stamp + log tray, tech coat + cage + hatch
@@ -93,7 +111,8 @@ export default function makeScene() {
         { name: 'signfuse', clue: sign, beat: 's9_step_signfuse', onAdvance: () => { this.bay1Fused = true; sign.material = P.mat(0x2a3a2a); } },
         { name: 'charge', after: ['signfuse', 'chipin'], clue: bay1 },
         { name: 'paperwork', clue: order, beat: 's9_step_paperwork' },
-        { name: 'sync', after: ['barcode', 'ballast2', 'charge', 'paperwork'], clue: bay2, beat: 's9_step_sync' },
+        { name: 'sync', after: ['barcode', 'ballast2', 'charge', 'paperwork'], clue: bay2, beat: 's9_step_sync',
+          onAdvance: (a, opts) => { if (!opts || !opts.silent) a.checkpoint('sync', { steps: a._chain.order.filter(n => a._chain.done(n)) }); } },
         { name: 'turnstile', after: ['sync'], clue: turnstile, beat: 's9_step_turnstile' },
         { name: 'cagekey', after: ['turnstile'], clue: coatMesh },
         { name: 'openhatch', after: ['cagekey'], clue: cage, onAdvance: () => { this.cageOpen = true; cage.userData.open(); } },
@@ -218,6 +237,17 @@ export default function makeScene() {
     },
 
     update(dt, api) {
+      // drive the live Bay-2 checklist lamps (green when satisfied)
+      if (this._checkLamps) {
+        for (const c of this._checkLamps) {
+          const on = !!c.test();
+          if (on !== c.on) {
+            c.on = on;
+            c.lamp.material = P.mat(on ? 0x2abf5a : 0x552222, { emissive: on ? 0x1a6a34 : 0x3a0808, emissiveIntensity: on ? 1 : 0.8, edges: false });
+            if (on) api.audio.sfx('pick');
+          }
+        }
+      }
       // the night tech walks in, hangs his coat on the rack, and works on the decoy
       if (this._techStep < 0 || this._techStep > 3) return;
       const script = [
@@ -235,6 +265,21 @@ export default function makeScene() {
         this._workT = (this._workT || 0) + dt;
         if (this._workT > 9 && !api.solved) { this._workT = 0; api.narrator.say('s9_tech_work2', { category: 'VOICE' }); }
       }
+    },
+
+    // Deterministic reload from the post-sync milestone (plan §2 checkpoints).
+    restoreCheckpoint(api, cp) {
+      if (cp.milestone !== 'sync') return;
+      const steps = (cp.payload && cp.payload.steps) || [];
+      api._chain.restore(steps);
+      // rebuild the sub-state the acceptCarry handlers had set (not covered by onAdvance)
+      this._vacEnt.hasChip = true; this._vacEnt.ballast = 2; this._vacEnt.charged = true; this._vacEnt.hasBarcode = true;
+      this._chipEnt.ground = true; this._peeled = true; this._gaveSignFuse = true; this._gaveStamp = true;
+      this._orderEnt.stamped = true; this.bay1Fused = true;
+      api.clearSelfAction();
+      // the synced decoy sits on Bay 2, as it did the moment before the reload
+      if (this._vac) { this._vac.position.set(3, 0.3, -4); this._vac.rotation.set(0, 0, 0); this._vac.scale.setScalar(1); }
+      api.toast('Restored: the decoy is docked on Bay 2. The way out is behind you.', 3600);
     },
   };
 }
