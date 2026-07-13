@@ -64,6 +64,16 @@ export function createApi(core, group, onSolve) {
     },
     setTask(t) { api.ui && api.ui.setTask(t); },
     toast(t, ms) { api.ui && api.ui.toast(t, ms); },
+    // a practical focused light (plan §3 per-scene practical light source); adds a
+    // SpotLight aimed at a floor point plus a small emissive fixture housing.
+    spot(x, y, z, tx, tz, opts = {}) {
+      const l = new THREE.SpotLight(opts.color ?? 0xfff2d8, opts.intensity ?? 6, opts.dist ?? 12, opts.angle ?? Math.PI / 7, opts.penumbra ?? 0.5, opts.decay ?? 1.2);
+      l.position.set(x, y, z);
+      const tgt = new THREE.Object3D(); tgt.position.set(tx ?? x, 0, tz ?? z);
+      group.add(l); group.add(tgt); l.target = tgt;
+      if (opts.fixture !== false) { const f = P.box(0.3, 0.16, 0.3, 0x1a1a1e, { emissive: opts.color ?? 0xfff2d8, emissiveIntensity: 0.5, edges: false }); f.position.set(x, y, z); group.add(f); }
+      return l;
+    },
     setAnchors(a) { core.setAnchors && core.setAnchors(a); },
     setAmbient(v) { core.setAmbient && core.setAmbient(v); },
     credits() { core.onCredits && core.onCredits(); },

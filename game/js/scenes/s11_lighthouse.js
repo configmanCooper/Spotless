@@ -95,11 +95,31 @@ export default function makeScene() {
       const cradle = P.box(0.8, 1.4, 0.6, 0x33323a, { emissive: 0x0a0a12 }); api.prop(cradle, 3, 0.9, 35); api.nav.addBox(3, 35, 0.8, 0.6);
       api.prop(P.labelPlaque('IGNITER CRADLE\n[Series-C]', 0.9, 0.4, { bg: '#33323a', fg: '#cde' }), 3, 1.8, 35);
 
-      // ---------- Lamp room: Ash + lens/beam ----------
+      // ---------- Lamp room: Ash + the great lamp (the emotional payoff object) ----------
       const ash = P.robot({ body: 0xece3d2, patched: true }); this._ash = ash.group; api.prop(this._ash, 0, 0, 42); this._ash.rotation.y = Math.PI;
       this._ashPos = new THREE.Vector3(0, 1.4, 42);
-      this._lampMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 1.6, 14), new THREE.MeshStandardMaterial({ color: 0x2a2a30, emissive: 0x000000 }));
-      api.prop(this._lampMesh, 0, 2.6, 44);
+      // A proper first-order lighthouse lamp: brass pedestal + housing, a central
+      // bulb, and a Fresnel lens of stacked glass rings that lights ring-by-ring.
+      const lampGroup = new THREE.Group();
+      const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.95, 0.9, 12), P.mat(0x5a4a24, { metal: 0.5, rough: 0.5, edges: false })); pedestal.position.y = -1.35; P.addEdges(pedestal); lampGroup.add(pedestal);
+      const housing = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.05, 0.16, 12), P.mat(0x6a5a2a, { metal: 0.6, emissive: 0x1a1408, edges: false })); housing.position.y = 0.95; lampGroup.add(housing);
+      const capTop = new THREE.Mesh(new THREE.ConeGeometry(0.7, 0.7, 12), P.mat(0x5a4a24, { metal: 0.5, edges: false })); capTop.position.y = 1.4; lampGroup.add(capTop);
+      this._lampMesh = new THREE.Mesh(new THREE.SphereGeometry(0.34, 16, 12), new THREE.MeshStandardMaterial({ color: 0x3a3a30, emissive: 0x000000, emissiveIntensity: 2 }));
+      lampGroup.add(this._lampMesh);
+      // Fresnel lens rings (translucent glass) that will glow when the beam catches
+      this._lensRings = [];
+      this._lens = new THREE.Group();
+      for (let i = 0; i < 5; i++) {
+        const r = 0.5 + i * 0.14, y = 0.7 - i * 0.35;
+        const glassMat = new THREE.MeshStandardMaterial({ color: 0xbfe0ff, emissive: 0x0a1420, emissiveIntensity: 0.4, transparent: true, opacity: 0.32, roughness: 0.2, metalness: 0.1 });
+        const ring = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.28, 20, 1, true), glassMat);
+        ring.position.y = y; ring.raycast = () => {};
+        this._lens.add(ring); this._lensRings.push({ mesh: ring, mat: glassMat });
+        const rlow = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.28, 20, 1, true), glassMat.clone());
+        rlow.position.y = -y + 0.35; rlow.raycast = () => {}; this._lens.add(rlow); this._lensRings.push({ mesh: rlow, mat: rlow.material });
+      }
+      lampGroup.add(this._lens);
+      api.prop(lampGroup, 0, 2.6, 44);
       this._beam = new THREE.SpotLight(0xffd777, 0, 70, Math.PI / 8, 0.4); this._beam.position.set(0, 3, 44);
       const bt = new THREE.Object3D(); bt.position.set(0, 0, 0); api.group.add(this._beam); api.group.add(bt); this._beam.target = bt;
 
@@ -230,7 +250,11 @@ export default function makeScene() {
           }
         }
       }
-      if (this._phase !== 'climb') return;
+      if (this._phase !== 'climb') {
+        // the great lens turns once the lamp is lit (payoff ambient motion)
+        if (this._lens && this._beam.intensity > 0 && !api.world.reducedMotion) this._lens.rotation.y += dt * 0.6;
+        return;
+      }
       // c5_lampon advances when the player turns the lamp on in C5
       if (this._ch.ready('c5_lampon') && api.world.lampOn) this._ch.advance('c5_lampon');
     },
@@ -260,6 +284,8 @@ export default function makeScene() {
       // the beam catches — you are the missing part; then the spatial reveal
       this._phase = 'reveal';
       this._lampMesh.material.emissive.setHex(0xffd777); this._lampMesh.material.emissiveIntensity = 2; this._beam.intensity = 8;
+      // the Fresnel lens catches the light, ring by ring
+      if (this._lensRings) this._lensRings.forEach((r, i) => setTimeout(() => { r.mat.emissive.setHex(0xffe3a8); r.mat.emissiveIntensity = 1.3; r.mat.opacity = 0.55; }, 120 * i));
       // fake volumetric beam sweeping out over the water (plan §3 effects)
       api.fx.beam({ x: 0, y: 2.6, z: 44 }, { x: 0, y: 8, z: 20 }, { color: 0xffe3a8, radius: 1.6, opacity: 0.16 });
       api.cameraImpulse(0.6);

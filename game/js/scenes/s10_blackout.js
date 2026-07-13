@@ -28,11 +28,26 @@ export default function makeScene() {
       api.setAmbient(0.22);
       api.world.lampDrains = true; api.world.lampBattery = 1;
 
+      // roadside houses — varied silhouettes (pitched roofs, heights, the odd lit
+      // window) so the dark reads as a street with landmarks, not a tunnel of boxes
       for (let i = 0; i < 9; i++) {
         const z = 2 - i * 4;
-        api.prop(P.box(3, 3, 3, 0x14141c), -5.5, 1.5, z);
-        api.prop(P.box(3, 3, 3, 0x14141c), 5.5, 1.5, z);
+        for (const side of [-1, 1]) {
+          const h = 2.2 + ((i * 7 + (side > 0 ? 3 : 0)) % 3) * 0.9;
+          api.prop(P.box(3, h, 3, 0x14141c), side * 5.5, h / 2, z);
+          const roof = new THREE.Mesh(new THREE.ConeGeometry(2.5, 1.2, 4), P.mat(0x0f0f16, { edges: false }));
+          roof.rotation.y = Math.PI / 4; P.addEdges(roof); api.prop(roof, side * 5.5, h + 0.55, z);
+          if ((i + (side > 0 ? 1 : 0)) % 3 === 0) {
+            const win = P.box(0.5, 0.6, 0.06, 0x1a1a22, { emissive: 0x7a5f2a, emissiveIntensity: 0.6, edges: false });
+            api.prop(win, side * (5.5 - 1.52), h * 0.55, z);
+          }
+        }
       }
+      // the lighthouse itself, a pale silhouette on the far shore — the destination
+      const lhTower = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.3, 6, 12), P.mat(0x1a1c26, { edges: false }));
+      P.addEdges(lhTower); api.prop(lhTower, 0, 3, -38);
+      const lhCap = new THREE.Mesh(new THREE.ConeGeometry(1.1, 1.2, 12), P.mat(0x14161f, { edges: false })); api.prop(lhCap, 0, 6.6, -38);
+      const lhGlow = P.glowSprite(0xffe3a8); lhGlow.position.set(0, 5.7, -38); lhGlow.material.opacity = 0.35; lhGlow.scale.setScalar(1.6); api.group.add(lhGlow); this._lhGlow = lhGlow;
       const man = P.human(0x3a3a4a); api.prop(man, 4, 0, 3);
       api.narrator.say('s10_intro', { category: 'STORY' });
       api.narrator.say('porchman_1', { category: 'VOICE' });
@@ -119,6 +134,8 @@ export default function makeScene() {
 
     update(dt, api) {
       if (api.solved) return;
+      // the distant lighthouse beacon breathes faintly (ambient landmark)
+      if (this._lhGlow && !api.world.reducedMotion) { this._t = (this._t || 0) + dt; this._lhGlow.material.opacity = 0.3 + Math.sin(this._t * 1.5) * 0.1; }
       if (api.world.lampOn && !this._lampLit) { this._lampLit = true; api.ui.setLampGlyph('on'); this._ch.advance('lamp'); }
       if (this._ch.ready('cross') && api.world.dust.position.z < -33) { api.narrator.say('s10_walk', { category: 'STORY' }); api.toast('The harbor. The lighthouse door stands open.'); this._ch.advance('cross'); api.solve(); }
     },

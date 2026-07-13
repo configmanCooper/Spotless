@@ -34,18 +34,38 @@ export default function makeScene() {
       api.use({ id: 'fireexit', mesh: exit, pos: new THREE.Vector3(10, 0.8, 5), reach: 2, prompt: 'fire exit (sealed)',
         available: () => !api.solved, onUse: (a) => a.narrator.say('bark_locked_edge', { category: 'REACT' }) });
 
-      // 11 plaqued exhibits (busywork)
+      // 11 plaqued exhibits (busywork) — each a DISTINCT silhouette under its own
+      // little picture-light, so the hall reads as a gallery, not a grid of boxes
+      const exGeo = (i) => {
+        switch (i % 8) {
+          case 0: return new THREE.SphereGeometry(0.26, 14, 10);
+          case 1: return new THREE.ConeGeometry(0.26, 0.6, 6);
+          case 2: return new THREE.TorusGeometry(0.22, 0.09, 8, 16);
+          case 3: return new THREE.CylinderGeometry(0.12, 0.26, 0.6, 10);
+          case 4: return new THREE.IcosahedronGeometry(0.28, 0);
+          case 5: return new THREE.OctahedronGeometry(0.3, 0);
+          case 6: return new THREE.BoxGeometry(0.4, 0.5, 0.4);
+          default: return new THREE.DodecahedronGeometry(0.27, 0);
+        }
+      };
+      const exHues = [0xc7d3f0, 0xd0c0a8, 0xb8c8d8, 0xd8c8b0, 0xc0d0c0, 0xd0b8c8, 0xc8c8d0, 0xd8d0b8];
       for (let i = 0; i < 11; i++) {
         const x = -8 + (i % 6) * 2.4, z = -6 + Math.floor(i / 6) * 3;
         api.prop(P.items.plinth(0x3a3d4c), x, 0.45, z);
-        const item = P.box(0.4, 0.5, 0.4, 0xc7d3f0, { metal: 0.3 }); api.prop(item, x, 1.15, z);
+        const item = new THREE.Mesh(exGeo(i), P.mat(exHues[i % exHues.length], { metal: 0.25, rough: 0.6 }));
+        P.addEdges(item); item.userData.isProp = true;
+        api.prop(item, x, 1.2, z);
+        // small emissive picture-light fixture above each piece (cheap "spotlight")
+        const fixture = P.box(0.22, 0.08, 0.14, 0x14141a, { emissive: 0xdfe6f5, emissiveIntensity: 0.7, edges: false });
+        api.prop(fixture, x, 2.15, z - 0.15);
         api.prop(P.labelPlaque('EXHIBIT ' + (i + 1), 0.6, 0.2), x, 0.5, z + 0.4);
         api.clean({ id: 'dust_' + i, mesh: item, pos: item.position, trashAmount: 0.01, removeOnClean: false, fake: true });
       }
 
-      // sleeper on a corner plinth
+      // sleeper on a corner plinth — the hero silhouette, under its own real spotlight
       api.prop(P.items.plinth(0x3a3d4c), 9, 0.45, -6);
       const sleeper = P.robot({ body: 0x9aa0b0 }).group; sleeper.scale.setScalar(0.85); api.prop(sleeper, 9, 1.0, -6);
+      api.spot(9, 4.2, -5.2, 9, -6, { color: 0xdce4f5, intensity: 7, dist: 9, angle: Math.PI / 8 });
       const panelMesh = P.box(0.34, 0.34, 0.06, 0x6a7080, { metal: 0.4 }); api.prop(panelMesh, 9, 1.5, -6.4);
       // three install slots (hidden until panel open)
       const socketMesh = P.box(0.5, 0.14, 0.1, 0x151820, { emissive: 0x223040 }); socketMesh.visible = false; api.prop(socketMesh, 9, 1.5, -6.42);
