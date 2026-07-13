@@ -12,11 +12,34 @@ export function mat(hex, opts = {}) {
     emissive: opts.emissive ?? 0x000000, emissiveIntensity: opts.emissiveIntensity ?? 1,
     flatShading: opts.flat ?? true,
   });
+  m.userData.shared = true;       // cached + reused across scenes; never dispose
   _mats.set(key, m);
   return m;
 }
 
+// Cache-aware teardown: free per-scene GPU resources (geometries, non-shared
+// materials + their textures) while preserving the shared material/texture caches
+// so later scenes keep rendering. Plan §3: dispose on scene change.
+export function disposeGroup(root) {
+  if (!root) return;
+  const seenMat = new Set(), seenGeo = new Set();
+  root.traverse((o) => {
+    if (o.geometry && !seenGeo.has(o.geometry)) { seenGeo.add(o.geometry); try { o.geometry.dispose(); } catch {} }
+    const mats = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
+    for (const m of mats) {
+      if (!m || m.userData?.shared || seenMat.has(m)) continue;
+      seenMat.add(m);
+      for (const k of ['map', 'emissiveMap', 'normalMap', 'roughnessMap', 'alphaMap']) {
+        const tex = m[k];
+        if (tex && tex !== _shadowTex && !tex.userData?.shared) { try { tex.dispose(); } catch {} }
+      }
+      try { m.dispose(); } catch {}
+    }
+  });
+}
+
 const _edgeMat = new THREE.LineBasicMaterial({ color: 0x111119, transparent: true, opacity: 0.28 });
+_edgeMat.userData.shared = true;   // reused as default outline across all scenes; never dispose
 // Crisp low-poly linework: a thin dark outline that makes silhouettes read clearly.
 export function addEdges(mesh, opts = {}) {
   if (!mesh.geometry) return mesh;
@@ -27,6 +50,39 @@ export function addEdges(mesh, opts = {}) {
     mesh.add(line);
   } catch {}
   return mesh;
+}
+
+// Fake contact shadow: a soft radial-gradient decal laid flat on the floor so
+// characters and props feel grounded without a real shadow map (plan §3).
+let _shadowTex = null;
+function shadowTexture() {
+  if (_shadowTex) return _shadowTex;
+  const cv = document.createElement('canvas'); cv.width = cv.height = 128;
+  const ctx = cv.getContext('2d');
+  if (ctx && ctx.createRadialGradient) {
+    const g = ctx.createRadialGradient(64, 64, 4, 64, 64, 62);
+    g.addColorStop(0, 'rgba(0,0,0,0.55)');
+    g.addColorStop(0.55, 'rgba(0,0,0,0.28)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, 128, 128);
+  } else if (ctx) {
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, 0, 128, 128);
+  }
+  _shadowTex = new THREE.CanvasTexture(cv);
+  _shadowTex.colorSpace = THREE.SRGBColorSpace;
+  return _shadowTex;
+}
+export function contactShadow(radius = 0.6, opacity = 0.7) {
+  const m = new THREE.Mesh(
+    new THREE.PlaneGeometry(radius * 2, radius * 2),
+    new THREE.MeshBasicMaterial({ map: shadowTexture(), transparent: true, opacity, depthWrite: false, toneMapped: false })
+  );
+  m.rotation.x = -Math.PI / 2;
+  m.position.y = 0.015;
+  m.renderOrder = -1;
+  m.raycast = () => {};
+  m.userData.isShadow = true;
+  return m;
 }
 
 export function box(w, h, d, hex, opts = {}) {
@@ -67,6 +123,7 @@ export function human(hex = 0x6a6f86, hatHex = null) {
     const brim = pm(new THREE.CylinderGeometry(0.26, 0.26, 0.03, 12), hatHex, { edges: false }); brim.position.y = 1.55; g.add(brim);
   }
   g.userData.human = true;
+  g.add(contactShadow(0.42, 0.6));
   return g;
 }
 
@@ -155,6 +212,7 @@ export function robot(opts = {}) {
   lampLight.target = lampTarget;
 
   g.userData.robot = { screen, scrMat, armL, armR, carryAnchor, lampLight, head };
+  g.add(contactShadow(0.5, 0.7));
   return { group: g, screen, arms: { l: armL, r: armR }, carryAnchor, lampLight, head };
 }
 

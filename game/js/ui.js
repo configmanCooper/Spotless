@@ -158,6 +158,23 @@ export class UI {
   }
   hidePause() { this.pauseEl.classList.add('hidden'); }
 
+  // Chapter/scene select board (uses the pause overlay panel).
+  showSceneSelect(entries, onPick, onBack) {
+    this.setHudVisible(false);
+    this.pauseEl.classList.remove('hidden');
+    this.pauseEl.innerHTML = `
+      <div class="settings scene-select">
+        <h3>SCENE SELECT</h3>
+        <div class="menu-list">
+          ${entries.map(e => `<button class="btn" data-id="${e.id}">${e.label}</button>`).join('')}
+        </div>
+      </div>
+      <button class="btn" id="ss-back">Back</button>`;
+    this.pauseEl.querySelectorAll('.menu-list button').forEach(b =>
+      b.onclick = () => { onPick(b.dataset.id); });
+    this.$('#ss-back').onclick = () => { this.pauseEl.classList.add('hidden'); onBack && onBack(); };
+  }
+
   showPause(onResume, onSettings, onTitle) {
     this.pauseEl.classList.remove('hidden');
     this.pauseEl.innerHTML = `

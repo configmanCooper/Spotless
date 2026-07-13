@@ -110,3 +110,7 @@ html,body{ margin:0; height:100%; background:#0d0b14; overflow:hidden; }
   font-size:16px; line-height:2.1; }
 #credits .roll h1{ font-size:40px; letter-spacing:.4em; margin:.4em 0; font-weight:300; }
 #credits .roll .dim{ color:var(--dim); font-size:13px; letter-spacing:.15em; }
+
+/* scene select list (plan §3 UI) */
+.scene-select .menu-list { max-height: 60vh; overflow-y: auto; gap: 6px; }
+.scene-select .menu-list .btn { min-width: 240px; }

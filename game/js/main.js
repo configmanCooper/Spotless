@@ -15,6 +15,7 @@ import { Input } from './input.js';
 import { World } from './world.js';
 import { createApi, updateApi } from './scenes/kit.js';
 import { SCENES, SCENE_INDEX, makeSceneById } from './scenes/index.js';
+import { disposeGroup } from './engine/props.js';
 
 class Game {
   async boot() {
@@ -78,13 +79,24 @@ class Game {
 
   _setSetting(k, v) { this.settings[k] = v; this.save.save(this.state); }
 
+  _disposeGroup(group) { try { disposeGroup(group); } catch {} }
+
   _startNew() {
     this.state.scene = 's00_party'; this.state.scenesDone = []; this.state.flags = {};
     this.state.linesHeard = []; this.narrator.setHeard([]);   // fresh narration on New Game
     this.save.save(this.state); this._begin(this.state.scene);
   }
   _continue() { this._begin(this.state.scene || 's00_party'); }
-  _sceneSelect() { /* simple: restart from beginning; full board is a stretch goal */ this._startNew(); }
+  _sceneSelect() {
+    // Honest chapter select: jump straight to any scene the player has reached.
+    // Unlocked = every scene up to and including the furthest one completed.
+    const done = this.state.scenesDone || [];
+    let furthest = -1;
+    for (let i = 0; i < SCENES.length; i++) if (done.includes(SCENES[i].id)) furthest = i;
+    const unlocked = Math.min(furthest + 1, SCENES.length - 1);
+    const entries = SCENES.slice(0, unlocked + 1).map((s, i) => ({ id: s.id, label: s.title || s.id, index: i }));
+    this.ui.showSceneSelect(entries, (id) => { this.ui.hidePause(); this._begin(id); }, () => this._showTitle());
+  }
 
   _begin(id) {
     this.ui.hideTitle(); this.ui.hidePause();
@@ -94,11 +106,12 @@ class Game {
   }
 
   loadScene(id) {
-    // tear down previous
-    if (this.group) { this.renderer.scene.remove(this.group); }
+    // tear down previous — remove AND dispose GPU resources (plan §3: disposal)
+    if (this.group) { this.renderer.scene.remove(this.group); this._disposeGroup(this.group); }
     this.interact.clear(); this.nav.clear();
     this.narrator.reset();
     this.renderer.setAmbient(1);
+    this.audio.clearSpatial();
     this.world.enabled = true; this.world.lampOn = false; this.world.setLampKnown(false);
     this.world.rig.lampLight.intensity = 0; this.world.setScreen('CLEANING…');
     this.world.resetLamp();
@@ -118,7 +131,8 @@ class Game {
       setAnchors: (a) => this.rig.setAnchors(a),
       setAmbient: (v) => this.renderer.setAmbient(v),
       onCredits: () => this._runCredits(),
-      setSpatialSource: (p) => {},
+      setSpatialSource: (p) => this.audio.setSpatialSource(p, this.renderer.camera),
+      setExposureScale: (s) => this.renderer.setExposureScale(s),
       memory: {
         get: (k) => this.state.flags && this.state.flags[k],
         set: (k, v) => { if (!this.state.flags || Array.isArray(this.state.flags)) this.state.flags = {}; this.state.flags[k] = v; this.save.save(this.state); },
@@ -253,7 +267,14 @@ class Game {
     let steps = 0;
     while (this.acc >= step && steps < 5) { this._tick(step); this.acc -= step; steps++; }
     // lamp glyph subtle animation handled by CSS
+    this.renderer.tickExposure(dt);
     this.renderer.render();
+    if (this.debug.on) this._budgetHUD();
+  }
+
+  _budgetHUD() {
+    const info = this.renderer.renderer.info;
+    this.debug.setBudget(info.render.calls, info.render.triangles, info.memory.geometries, info.memory.textures);
   }
 
   _tick(dt) {
@@ -267,6 +288,7 @@ class Game {
       this.hints.update(dt);
       this._reactions(dt);
       updateApi(this.api, dt, performance.now() / 1000);
+      if (this.narrator.mode === 'spatial') this.audio.updateListener(this.renderer.camera);
       if (this.world.lampDrains) this.ui.setBatteryArc(this.world.lampBattery);
       this.rig.update(dt, this.world.dust.position);
     } else if (this.mode === 'interlude' || this.mode === 'credits' || this.mode === 'title') {

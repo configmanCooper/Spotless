@@ -18,6 +18,37 @@ export class Audio {
   resume() { this.ensure(); this.ctx && this.ctx.state === 'suspended' && this.ctx.resume(); }
   setMaster(v) { this.master = v; }
 
+  // --- spatialized narrator (S11 reveal): route VO through a PannerNode so the
+  // voice appears to come from the old robot at the lamp, not from everywhere. ---
+  setSpatialSource(pos, camera) {
+    this.ensure(); if (!this.ctx) return;
+    if (!this.spatialNode) {
+      const panner = this.ctx.createPanner();
+      panner.panningModel = 'HRTF';
+      panner.distanceModel = 'inverse';
+      panner.refDistance = 1.6; panner.rolloffFactor = 0.6; panner.maxDistance = 40;
+      const gain = this.ctx.createGain(); gain.gain.value = this.master;
+      panner.connect(gain).connect(this.ctx.destination);
+      this.spatialNode = { panner, gain };
+    }
+    if (pos) {
+      const p = this.spatialNode.panner;
+      const set = (param, v) => { if (param.setValueAtTime) param.setValueAtTime(v, this.ctx.currentTime); };
+      if (p.positionX) { set(p.positionX, pos.x); set(p.positionY, pos.y); set(p.positionZ, pos.z); }
+      else if (p.setPosition) p.setPosition(pos.x, pos.y, pos.z);
+    }
+    if (camera) this.updateListener(camera);
+  }
+  updateListener(camera) {
+    if (!this.ctx || !this.ctx.listener || !camera) return;
+    const l = this.ctx.listener;
+    const p = camera.getWorldPosition(new (this._V || (this._V = camera.position.constructor))());
+    const set = (param, v) => { if (param && param.setValueAtTime) param.setValueAtTime(v, this.ctx.currentTime); };
+    if (l.positionX) { set(l.positionX, p.x); set(l.positionY, p.y); set(l.positionZ, p.z); }
+    else if (l.setPosition) l.setPosition(p.x, p.y, p.z);
+  }
+  clearSpatial() { this.spatialNode = null; }
+
   // --- VO ---
   playVO(id, opts = {}) {
     if (!this.enabled) return null;
@@ -30,6 +61,13 @@ export class Audio {
     }
     try {
       el.currentTime = 0; el.volume = this.master;
+      if (opts.spatial && this.spatialNode) {
+        // Route this element through the spatial panner (once per element).
+        this.ensure();
+        if (this.ctx && !el._srcNode) {
+          try { el._srcNode = this.ctx.createMediaElementSource(el); el._srcNode.connect(this.spatialNode.panner); el.volume = 1; } catch {}
+        }
+      }
       const p = el.play();
       p && p.catch(() => {});
       this.playing.set(id, el);

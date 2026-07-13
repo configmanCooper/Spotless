@@ -12,6 +12,7 @@ export class Hints {
   }
   reset() {
     this.clock = 0;
+    this.total = 0;           // whole-scene wall time (telemetry; survives setPool)
     this.sinceProgress = 999;
     this.tier = 0;
     this.pools = {};          // name -> [id,id,id]
@@ -43,7 +44,9 @@ export class Hints {
   markSolved() { this.solved = true; if (this.shimmerCb) this.shimmerCb(false, this.active); }
 
   update(dt) {
-    if (this.solved || this.settings.hints === 'off') return;
+    if (this.solved) return;
+    this.total += dt;                     // telemetry: total time in scene
+    if (this.settings.hints === 'off') return;
     this.sinceProgress += dt;
     const storyPlaying = this.narrator.currentPriority() >= 100;
     if (storyPlaying || this.sinceProgress < 60) return;
@@ -63,5 +66,5 @@ export class Hints {
     const id = this.hints[i];
     if (id && this.narrator.say(id, { category: 'HINT' })) this.consumed++;
   }
-  stats() { return { solveTime: this.clock, hints: this.consumed }; }
+  stats() { return { solveTime: this.total, stepTime: this.clock, hints: this.consumed }; }
 }

@@ -14,18 +14,18 @@ import s11 from './s11_lighthouse.js';
 
 // scene id -> factory; ORDER is the play order
 export const SCENES = [
-  { id: 's00_party', make: s00 },
-  { id: 's01_showroom', make: s01 },
-  { id: 's02_office', make: s02 },
-  { id: 's03_smarthome', make: s03, interludeAfter: 'int_1' },
-  { id: 's04_yard', make: s04 },
-  { id: 's05_museum', make: s05 },
-  { id: 's06_carehome', make: s06, interludeAfter: 'int_2' },
-  { id: 's07_theater', make: s07 },
-  { id: 's08_scrapyard', make: s08 },
-  { id: 's09_repair', make: s09, interludeAfter: 'int_3' },
-  { id: 's10_blackout', make: s10 },
-  { id: 's11_lighthouse', make: s11 },
+  { id: 's00_party', make: s00, title: '1 · The Party' },
+  { id: 's01_showroom', make: s01, title: '2 · The Showroom' },
+  { id: 's02_office', make: s02, title: '3 · The Office' },
+  { id: 's03_smarthome', make: s03, interludeAfter: 'int_1', title: '4 · The Smart Home' },
+  { id: 's04_yard', make: s04, title: '5 · The Yard' },
+  { id: 's05_museum', make: s05, title: '6 · The Museum' },
+  { id: 's06_carehome', make: s06, interludeAfter: 'int_2', title: '7 · The Care Home' },
+  { id: 's07_theater', make: s07, title: '8 · The Theater' },
+  { id: 's08_scrapyard', make: s08, title: '9 · The Scrapyard' },
+  { id: 's09_repair', make: s09, interludeAfter: 'int_3', title: '10 · The Repair Shop' },
+  { id: 's10_blackout', make: s10, title: '11 · The Blackout' },
+  { id: 's11_lighthouse', make: s11, title: '12 · The Lighthouse' },
 ];
 
 export const SCENE_INDEX = Object.fromEntries(SCENES.map((s, i) => [s.id, i]));
