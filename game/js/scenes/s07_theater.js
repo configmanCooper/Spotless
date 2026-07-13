@@ -30,6 +30,10 @@ export default function makeScene() {
       api.wall(0, -9, 24, 0.3, 0x241820); api.wall(-11, 0, 0.3, 18, 0x241820); api.wall(11, 0, 0.3, 18, 0x241820);
 
       const stage = P.box(16, 0.3, 5, 0x2a1c24); api.prop(stage, 0, 0.15, -4);
+      api.fx.motes({ count: 55, area: [20, 6, 12], center: [0, 3, -3], color: 0xf0c98a, opacity: 0.16, size: 0.05 });
+      // footlights along the stage lip (practical stage light)
+      for (let i = 0; i < 7; i++) { const fl = P.box(0.2, 0.12, 0.2, 0x14100c, { emissive: 0xffb060, emissiveIntensity: 0.7, edges: false }); api.prop(fl, -6 + i * 2, 0.34, -1.5); }
+      const footGlow = new THREE.PointLight(0xffb060, 1.2, 12, 1.6); footGlow.position.set(0, 0.6, -2); api.group.add(footGlow);
       const spotCircle = new THREE.Mesh(new THREE.CircleGeometry(1.4, 24), new THREE.MeshStandardMaterial({ color: 0x2a2418, emissive: 0x000000, roughness: 0.6 }));
       spotCircle.rotation.x = -Math.PI / 2; api.prop(spotCircle, 0, 0.32, -2.5); this._circle = spotCircle;
       this._spot = new THREE.SpotLight(0xfff2c0, 0, 14, Math.PI / 7, 0.5); this._spot.position.set(0, 8, -2.5);
@@ -45,10 +49,12 @@ export default function makeScene() {
       const box = P.box(0.9, 0.9, 0.7, 0x33262e); api.prop(box, 5, 0.5, -3); api.nav.addBox(5, -3, 0.9, 0.7);
       const prompter = P.human(0x5a4a55); prompter.scale.setScalar(0.9); api.prop(prompter, 5, 0, -2); this._prompter = prompter;
       const boxKeyMesh = P.items.key(0xffd777); boxKeyMesh.position.set(0.2, 1.3, 0); boxKeyMesh.scale.setScalar(0.7); prompter.add(boxKeyMesh);
+      // a "Zzz" that shows when he's actually asleep — the snore window made visible
+      this._snoreGlow = P.labelPlaque('z Z z', 0.4, 0.2, { bg: '#20161c', fg: '#b0a0d0', frame: false }); this._snoreGlow.position.set(0.3, 1.9, 0); this._snoreGlow.material.transparent = true; prompter.add(this._snoreGlow);
 
       // SM desk (tape / mend)
       const smdesk = P.box(1, 0.9, 0.7, 0x33323a); api.prop(smdesk, 8, 0.45, 4); api.nav.addBox(8, 4, 1, 0.7);
-      api.prop(P.labelPlaque('SM DESK', 0.6, 0.2, { bg: '#33323a', fg: '#cde' }), 8, 1.1, 4);
+      api.mountSign(smdesk, 'SM DESK', 0.5, 0.16, [0, 0.5, 0.37], { bg: '#33323a', fg: '#cde' });
 
       // fly rope wall — each line is colour-tagged; the batten blocking the ladder
       // wears the same colour as the rope that raises it (a match, not a number).
@@ -74,11 +80,11 @@ export default function makeScene() {
 
       // spotlight rig (install bulb) — at floor level for reach
       const spotrig = P.box(0.5, 0.5, 0.5, 0x33323a); api.prop(spotrig, -6, 0.4, -6); api.nav.addBox(-6, -6, 0.5, 0.5);
-      api.prop(P.labelPlaque('SPOT RIG', 0.6, 0.2, { bg: '#33323a', fg: '#cde' }), -6, 1.0, -6);
+      api.mountSign(spotrig, 'SPOT RIG', 0.46, 0.16, [0, 0.32, 0.27], { bg: '#33323a', fg: '#cde' });
 
       // lighting board + cue sheet + preset dial (1..8)
       const board = P.box(1.2, 0.9, 0.6, 0x33323a, { emissive: 0x0a0a12 }); api.prop(board, 8, 0.45, -5); api.nav.addBox(8, -5, 1.2, 0.6);
-      api.prop(P.labelPlaque('CUE: ACT II Sc4\nVERA ALONE — PRESET 7', 1.2, 0.5, { bg: '#33323a', fg: '#d9435b' }), 8, 1.3, -5);
+      api.mountSign(board, 'CUE: ACT II Sc4\nVERA ALONE — PRESET 7', 1.0, 0.42, [0, 0.55, 0.32], { bg: '#33323a', fg: '#d9435b' });
 
       // sweepable busywork
       for (let i = 0; i < 4; i++) { const d = P.mess('crumb', 0x6a5a4a); api.prop(d, -7 + i * 0.5, 0.14, 2); api.clean({ id: 'sweep_' + i, mesh: d, pos: d.position, trashAmount: 0.02, fake: true }); }
@@ -137,6 +143,8 @@ export default function makeScene() {
     update(dt, api) {
       if (api.solved) return;
       this._t += dt;
+      // the "Zzz" shows only while he's genuinely asleep (visible snore window)
+      if (this._snoreGlow) { const sn = this._snoring(); this._snoreGlow.visible = sn; if (sn && !api.world.reducedMotion) this._snoreGlow.material.opacity = 0.5 + Math.sin(this._t * 4) * 0.3; }
       this._barkT += dt; if (this._barkT > 10) { this._barkT = 0; api.narrator.say('director_1', { category: 'VOICE' }); }
       // perform: mended page (both halves) + spotlight on + standing in the circle
       if (this._ch.ready('perform') && this._ch.done('mend') && this.spotOn && api.world.dust.position.distanceTo(this._spotPos) < 1.5) {

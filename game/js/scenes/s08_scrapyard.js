@@ -50,7 +50,7 @@ export default function makeScene() {
 
       // generator + barrels + fuel cutoff (walled by barrels)
       const gen = P.box(1.6, 1.2, 1, 0x4a4a3a, { emissive: 0x120c04 }); api.prop(gen, -8, 0.6, 6); api.nav.addBox(-8, 6, 1.6, 1);
-      api.prop(P.labelPlaque('GENERATOR', 0.9, 0.2, { bg: '#4a4a3a', fg: '#e8dcc0' }), -8, 1.4, 6);
+      api.mountSign(gen, 'GENERATOR', 0.8, 0.18, [0, 0.45, 0.52], { bg: '#4a4a3a', fg: '#e8dcc0' });
       const cutoff = P.items.cutoffBox(0x8a3a3a, 0xd94040); api.prop(cutoff, -6.6, 0.55, 6);
       // barrels sit on a painted grid — row letters down one side, column numbers along
       // the other, so you can read each barrel's cell straight off the floor
@@ -65,18 +65,18 @@ export default function makeScene() {
 
       // crane cab: two dials + drop; board key hangs here
       const cab = P.box(1.2, 1.4, 1.2, 0x5a5040); api.prop(cab, 6, 0.7, 6); api.nav.addBox(6, 6, 1.2, 1.2);
-      api.prop(P.labelPlaque('CRANE CAB', 0.9, 0.2, { bg: '#5a5040', fg: '#e8dcc0' }), 6, 1.6, 6);
+      api.mountSign(cab, 'CRANE CAB', 0.8, 0.18, [0, 0.55, 0.62], { bg: '#5a5040', fg: '#e8dcc0' });
 
       // foreman board (tag) + LOTO poster + breaker
       const board = P.box(1, 1.2, 0.2, 0x3a352a); api.prop(board, 9, 0.9, -6); api.nav.addBox(9, -6, 1, 0.3);
-      api.prop(P.labelPlaque('LOCKOUT/TAGOUT\nTAG THE BREAKER', 1.1, 0.5, { bg: '#c9433f', fg: '#fff' }), 9, 1.8, -6);
+      api.mountSign(board, 'LOCKOUT/TAGOUT\nTAG THE BREAKER', 0.9, 0.44, [0, 0.3, 0.12], { bg: '#c9433f', fg: '#fff' });
       const breaker = P.box(0.6, 1, 0.3, 0x4a5560, { emissive: 0x0a1015 }); api.prop(breaker, 9, 0.6, -4); api.nav.addBox(9, -4, 0.6, 0.3);
 
       // walkway gate + heap dig + core + bell + chutes
       const gate = api.door(3, 4, 2.5, 0.3, 0x2a3a5a, 1.8);
       const redBin = P.items.bin(0xc9433f, false); api.prop(redBin, -6, 0.7, 3); api.nav.addBox(-6, 3, 1.4, 1.4); redBin.scale.set(1.6, 1.6, 1.6);
       const blueChute = P.box(1.4, 1.4, 1.4, 0x4a7ac9, { emissive: 0x10203a }); api.prop(blueChute, 6, 0.7, 3); api.nav.addBox(6, 3, 1.4, 1.4);
-      api.prop(P.labelPlaque('OUTBOUND\nEMPTY', 1.2, 0.4, { bg: '#4a7ac9', fg: '#fff' }), 6, 1.7, 3);
+      api.mountSign(blueChute, 'OUTBOUND\nEMPTY', 1.1, 0.36, [0, 0.55, 0.72], { bg: '#4a7ac9', fg: '#fff' });
       const bell = P.items.bell(0xc9a94a); api.prop(bell, 9, 1.0, 3); api.nav.addBox(9, 3, 0.5, 0.5);
       api.prop(P.labelPlaque('RING FOR\nPICKUP', 0.8, 0.4, { bg: '#3a3128', fg: '#ffd' }), 9, 1.6, 3);
 

@@ -37,11 +37,11 @@ export default function makeScene() {
       api.fx.motes({ count: 60, area: [20, 5, 14], center: [0, 2.3, 0], color: 0xbfe0d4, opacity: 0.18, size: 0.05 });
       api.wall(0, -8, 24, 0.3, 0x2a322e); api.wall(-11, 0, 0.3, 16, 0x2a322e); api.wall(11, 0, 0.3, 16, 0x2a322e);
 
-      // Bay 1 / Bay 2 + posters
+      // Bay 1 / Bay 2 + posters (bay signs stand on posts beside the pads)
       const bay1 = P.box(1.4, 0.2, 1.4, 0x3a4a44); api.prop(bay1, -3, 0.1, -4);
-      api.prop(P.labelPlaque('BAY 1\nDIAGNOSTIC', 1, 0.4, { bg: '#3a4a44', fg: '#cde' }), -3, 1.4, -5.4);
+      api.postSign('BAY 1\nDIAGNOSTIC', -3.9, -4.8, 0.8, 0.34, { bg: '#3a4a44', fg: '#cde', signY: 1.3 });
       const bay2 = P.box(1.4, 0.2, 1.4, 0x4a3a3a); api.prop(bay2, 3, 0.1, -4);
-      api.prop(P.labelPlaque('BAY 2\nSYNC', 1, 0.4, { bg: '#4a3a3a', fg: '#fdd' }), 3, 1.4, -5.4);
+      api.postSign('BAY 2\nSYNC', 2.1, -4.8, 0.8, 0.34, { bg: '#4a3a3a', fg: '#fdd', signY: 1.3 });
       const poster = P.labelPlaque('SYNC = RESTORE\nFACTORY STATE', 1.4, 0.5, { bg: '#e8dcd0', fg: '#6a2a2a' }); api.prop(poster, 5.5, 1.8, -6.7);
       // live Bay-2 checklist: five lamps that turn green as each requirement is met
       // (plan §2 state feedback) — replaces the old static "remember six conditions" sign
@@ -70,7 +70,7 @@ export default function makeScene() {
       const chip = P.items.chip(0x2a7a3a); api.prop(chip, 5.4, 1.65, 2);
       api.prop(P.labelPlaque('PORT KEY: ◣', 0.7, 0.24, { bg: '#33403a', fg: '#9ad' }), 8, 1.2, 1);
       const grinder = P.box(0.6, 0.5, 0.5, 0x555555, { metal: 0.5 }); api.prop(grinder, 8, 0.9, 3); api.nav.addBox(8, 3, 0.6, 0.5);
-      api.prop(P.labelPlaque('BENCH GRINDER', 0.9, 0.2, { bg: '#33403a', fg: '#cde' }), 8, 1.3, 3);
+      api.mountSign(grinder, 'BENCH GRINDER', 0.7, 0.16, [0, 0.15, 0.27], { bg: '#33403a', fg: '#cde' });
 
       // the shop vacuum (drop-target + pickable) with a port
       const vac = P.items.vacuum(0x6a7a72); api.prop(vac, -1, 0.4, 3); this._vac = vac;
@@ -81,11 +81,11 @@ export default function makeScene() {
       const sign = P.box(1.2, 0.5, 0.15, 0x2a8a4a, { emissive: 0x0a3a1a }); api.prop(sign, -9, 1.6, -3); api.nav.addBox(-9, -3, 0.3, 0.3);
       api.prop(P.labelPlaque('OPEN', 0.8, 0.3, { bg: '#2a8a4a', fg: '#fff' }), -9, 1.6, -2.85);
       const order = P.items.paper(0xf0ead2); api.prop(order, 8, 0.9, -3); api.nav.addBox(8, -3, 0.5, 0.5);
-      api.prop(P.labelPlaque('WORK ORDER', 0.8, 0.24, { bg: '#e8dcc0', fg: '#4a3a20' }), 8, 1.35, -3);
+      api.postSign('WORK ORDER', 8, -3.6, 0.7, 0.2, { bg: '#e8dcc0', fg: '#4a3a20', signY: 1.2 });
       const stampBoard = P.box(0.6, 0.9, 0.1, 0x33302a); api.prop(stampBoard, 9.5, 1.2, -2);
-      api.prop(P.labelPlaque('AUTH STAMP', 0.8, 0.24, { bg: '#33302a', fg: '#e8c94a' }), 9.5, 1.85, -2);
+      api.mountSign(stampBoard, 'AUTH STAMP', 0.66, 0.2, [0, 0.6, 0.07], { bg: '#33302a', fg: '#e8c94a' });
       const logtray = P.box(1, 0.1, 0.7, 0x6a6a5a); api.prop(logtray, 9.5, 0.6, -4); api.nav.addBox(9.5, -4, 1, 0.7);
-      api.prop(P.labelPlaque('LOG TRAY', 0.7, 0.24, { bg: '#6a6a5a', fg: '#1a1a1a' }), 9.5, 1.0, -4.35);
+      api.postSign('LOG TRAY', 9.5, -4.7, 0.62, 0.2, { bg: '#6a6a5a', fg: '#1a1a1a', signY: 1.0 });
 
       // coat RACK (empty at first) — the tech hangs his coat here after he arrives
       const rackPole = P.box(0.1, 1.6, 0.1, 0x4a4030); api.prop(rackPole, -8.2, 0.8, 4.8);
@@ -96,10 +96,10 @@ export default function makeScene() {
       this._techStep = -1; this.coatHung = false;
 
       const turnstile = P.box(0.6, 1.2, 0.6, 0x555a55, { emissive: 0x0a0e0a }); api.prop(turnstile, 0, 0.6, 7.7);
-      api.prop(P.labelPlaque('EXIT — SCAN CHASSIS', 1.4, 0.24, { bg: '#555a55', fg: '#cde' }), 0, 1.4, 7.6);
+      api.mountSign(turnstile, 'EXIT — SCAN CHASSIS', 1.2, 0.2, [0, 0.5, -0.32], { bg: '#555a55', fg: '#cde', rot: [0, Math.PI, 0] });
       const cage = api.door(9.5, 6, 2, 0.3, 0x3a3a34, 1.8);
       const hatch = P.box(1, 1, 0.4, 0x2a2a24, { emissive: 0x080808 }); api.prop(hatch, 9.5, 0.6, 7.5); this._hatchMesh = hatch;
-      api.prop(P.labelPlaque('PARTS OUT →', 1, 0.24, { bg: '#2a2a24', fg: '#cde' }), 9.5, 1.3, 7.6);
+      api.mountSign(hatch, 'PARTS OUT →', 0.9, 0.2, [0, 0.65, 0.21], { bg: '#2a2a24', fg: '#cde' });
 
       const ch = api.chain([
         { name: 'discover', clue: poster, beat: 's9_step_discover' },

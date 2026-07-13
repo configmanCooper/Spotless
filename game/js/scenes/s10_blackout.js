@@ -52,8 +52,8 @@ export default function makeScene() {
       api.narrator.say('s10_intro', { category: 'STORY' });
       api.narrator.say('porchman_1', { category: 'VOICE' });
 
-      // road map (shows both charge points) at the bus stop
-      api.prop(P.labelPlaque('ROAD MAP\n⚡ porch   ⚡ substation', 1.6, 0.5, { bg: '#12141f', fg: '#8fb0ff' }), -4, 1.4, 3.5);
+      // road map (shows both charge points) — a wayfinding sign on a post at the stop
+      api.postSign('ROAD MAP\n⚡ porch   ⚡ substation', -4, 3.5, 1.4, 0.44, { bg: '#12141f', fg: '#8fb0ff', signY: 1.5 });
 
       // recharge points
       const porchOutlet = P.box(0.4, 0.4, 0.2, 0x2a3050, { emissive: 0x1a2a5a }); api.prop(porchOutlet, 3, 0.6, 4.4);
@@ -72,7 +72,7 @@ export default function makeScene() {
 
       // stalled utility truck (up a side lane) → crank
       const truck = P.box(1.6, 1.2, 3, 0x3a3a44); api.prop(truck, -5.5, 0.6, -3); api.nav.addBox(-5.5, -3, 1.6, 3);
-      api.prop(P.labelPlaque('UTILITY', 0.7, 0.2, { bg: '#3a3a44', fg: '#cde' }), -5.5, 1.5, -1.4);
+      api.mountSign(truck, 'UTILITY', 0.6, 0.16, [0, 0.15, 1.52], { bg: '#3a3a44', fg: '#cde' });
 
       // harbor bridge (up) + winch (same hex socket) at the far south
       this._bridge = api.door(0, -30, 10, 0.5, 0x2a2a3a, 1.2);
