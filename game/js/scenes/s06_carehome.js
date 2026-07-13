@@ -35,7 +35,12 @@ export default function makeScene() {
         const photo = P.items.photo(0x8a6a4a, [0xd0b0a0, 0xbfd0d8, 0xc8d0b0, 0xd8c0a0][i]);
         api.prop(photo, -2.4 + i * 0.8, 0.9, -3);
         api.use({ id: 'photo_' + i, mesh: photo, pos: photo.position, reach: 1.5, pickable: true, dropY: 0.9, match: i === CORRECT, wrongLine: i === 0 ? 's6_wrongphoto_a' : 's6_wrongphoto_b',
-          prompt: () => 'a photo: ' + desc[i], onPick: (a) => a.narrator.line('This one shows ' + desc[i] + '.', { id: 's6_pdesc_' + i, category: 'REACT' }) });
+          prompt: () => 'a photo: ' + desc[i],
+          onPick: (a, ent) => {
+            a.narrator.line('This one shows ' + desc[i] + '.', { id: 's6_pdesc_' + i, category: 'REACT' });
+            // first time you lift a photo, look closely — compare it to his keepsakes
+            if (!ent._seen) { ent._seen = true; a.openExamine({ title: 'A photograph', accent: '#e8b7a0', lines: [desc[i][0].toUpperCase() + desc[i].slice(1) + '.', 'Hold it against the things he kept in the case.'] }); }
+          } });
       }
 
       // the old man + suitcase
@@ -46,8 +51,13 @@ export default function makeScene() {
       const velvet = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.1), P.mat(0x6a2a3a, { rough: 1, edges: false })); velvet.rotation.x = -Math.PI / 2; velvet.position.y = 0.031; caseBase.add(velvet);
       const suitcase = P.box(0.5, 0.4, 0.3, 0x5a4a3a); api.prop(suitcase, 8.7, 0.2, 2);
       const tin = P.items.tin(0x6a9a7a); tin.position.set(0, 0.25, 0); tin.scale.setScalar(0.7); suitcase.add(tin); // the mint tin, echoed on the right photo
-      api.use({ id: 'suitcase', mesh: suitcase, pos: new THREE.Vector3(8.7, 0.4, 2), reach: 1.8, prompt: 'go through the suitcase',
-        available: () => this._ch.ready('suitcase'), onUse: () => this._ch.advance('suitcase') });
+      api.use({ id: 'suitcase', mesh: suitcase, pos: new THREE.Vector3(8.7, 0.4, 2), reach: 1.8, prompt: () => this._ch.done('suitcase') ? 'look through the suitcase again' : 'go through the suitcase',
+        available: () => !api.solved,
+        onUse: (a) => {
+          if (this._ch.ready('suitcase')) this._ch.advance('suitcase');
+          // the reference set to compare the photos against (object comparison, §S6)
+          a.openExamine({ title: 'His suitcase', accent: '#e8b7a0', lines: ['A tin of green mints, half gone.', 'A ball of knitting wool, the needles still in it.', 'An empty case for a pair of red bifocals.', 'Her photo will have these things in it.'] });
+        } });
 
       api.use({
         id: 'oldman', mesh: man, pos: new THREE.Vector3(8, 1, 2), reach: 2,
@@ -64,7 +74,7 @@ export default function makeScene() {
           }
           return false;
         },
-        onUse: (a) => { if (!a.world.carry) a.narrator.line('"...waiting for the bus," he says, to no one.', { id: 's6_bus', category: 'VOICE', speaker: 'oldman' }); },
+        onUse: (a) => { if (!a.world.carry) a.narrator.say('s6_bus', { category: 'VOICE', speaker: 'oldman' }); },
       });
 
       // nurse cart patroller carrying red + blue glasses
@@ -104,7 +114,11 @@ export default function makeScene() {
 
     update(dt, api) {
       this._t = (this._t || 0) + dt;
-      if (this._t > 11) { this._t = 0; if (!api.solved) api.narrator.say('nurse_1', { category: 'VOICE' }); }
+      if (api.solved) return;
+      // guarantee the bus line early — the scene's quiet heartbreak (plan §S6)
+      if (this._t > 4 && !this._busSaid) { this._busSaid = true; api.narrator.say('s6_bus', { category: 'VOICE', speaker: 'oldman' }); }
+      // keep narration sparse: the nurse passes just twice, then the room is quiet
+      if (this._t > 20 && !this._nurse2) { this._nurse2 = true; api.narrator.say('nurse_2', { category: 'VOICE' }); }
     },
   };
 }

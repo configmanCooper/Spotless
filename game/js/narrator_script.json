@@ -539,6 +539,8 @@
   "director_1": { "category": "VOICE", "speaker": "director", "cooldown": 7, "text": "Sweep the wings. Be INVISIBLE. If we see you, you're doing it wrong." },
   "director_blow": { "category": "VOICE", "speaker": "director", "once": true, "text": "WHAT is the cleaning unit doing in my spotlight?!" },
   "nurse_1": { "category": "VOICE", "speaker": "nurse", "cooldown": 9, "text": "Everything in the room goes in the bin, love. Resident's gone." },
+  "nurse_2": { "category": "VOICE", "speaker": "nurse", "once": true, "text": "Don't mind him. | He talks to the window. | Been packed for the bus since Tuesday." },
+  "s6_bus": { "category": "VOICE", "speaker": "oldman", "once": true, "text": "Just waiting for the bus, he says, to no one in particular. | She's meeting me at the stop. | She's always a little late." },
   "neighbor_1": { "category": "VOICE", "speaker": "neighbor", "cooldown": 9, "text": "Bag those leaves before the storm, robot!" },
   "porchman_1": { "category": "VOICE", "speaker": "porchman", "cooldown": 9, "text": "Stay put, robot. Your lot are blind in the dark." },
   "salesman_1": { "category": "VOICE", "speaker": "salesman", "cooldown": 7, "text": "Watch the Series-C handle THIS common kitchen accident!" }

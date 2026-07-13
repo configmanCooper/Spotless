@@ -61,11 +61,19 @@ export default function makeScene() {
         api.prop(P.labelPlaque('EXHIBIT ' + (i + 1), 0.6, 0.2), x, 0.5, z + 0.4);
         api.clean({ id: 'dust_' + i, mesh: item, pos: item.position, trashAmount: 0.01, removeOnClean: false, fake: true });
       }
+      // a tally board makes the count discrepancy legible: you can dust ELEVEN, but
+      // the placard says twelve — the twelfth is asleep, not on a plinth (plan §S5)
+      this._countBoard = P.labelPlaque('DUSTED\n0 / 12', 1.0, 0.5, { bg: '#20242f', fg: '#8ab0ff' });
+      api.prop(this._countBoard, -8, 2.3, -8.82);
+      this._countText = '';
 
-      // sleeper on a corner plinth — the hero silhouette, under its own real spotlight
+      // sleeper on a corner plinth — the hero silhouette, under its own real spotlight.
+      // Its plinth is numbered 12 but bears no name-plaque: the missing exhibit.
       api.prop(P.items.plinth(0x3a3d4c), 9, 0.45, -6);
       const sleeper = P.robot({ body: 0x9aa0b0 }).group; sleeper.scale.setScalar(0.85); api.prop(sleeper, 9, 1.0, -6);
       api.spot(9, 4.2, -5.2, 9, -6, { color: 0xdce4f5, intensity: 7, dist: 9, angle: Math.PI / 8 });
+      api.prop(P.labelPlaque('12', 0.34, 0.24, { bg: '#3a3d4c', fg: '#8ab0ff' }), 9, 0.5, -5.55);
+      api.prop(P.labelPlaque('— no plaque —', 0.7, 0.16, { bg: '#20242f', fg: '#5a6478' }), 9, 1.72, -6.42);
       const panelMesh = P.box(0.34, 0.34, 0.06, 0x6a7080, { metal: 0.4 }); api.prop(panelMesh, 9, 1.5, -6.4);
       // three install slots (hidden until panel open)
       const socketMesh = P.box(0.5, 0.14, 0.1, 0x151820, { emissive: 0x223040 }); socketMesh.visible = false; api.prop(socketMesh, 9, 1.5, -6.42);
@@ -85,9 +93,20 @@ export default function makeScene() {
       api.prop(P.labelPlaque('#7 EARLY\nMANIPULATOR\nartist unknown', 0.9, 0.6, { bg: '#2a3550', fg: '#cde' }), -9, 1.9, 5.55);
       const caseLight = P.box(0.1, 0.1, 0.05, 0xd94040, { emissive: 0x3a0808 }); api.prop(caseLight, -9, 1.7, 6.45); this._caseLight = caseLight;
 
-      // guard desk + alarm dial, guard patroller
+      // guard desk + alarm dial, guard patroller with a sweeping flashlight so the
+      // timing reads by MOVEMENT + LIGHT + SOUND, not the case colour alone (plan §S5)
       const desk = P.box(1.4, 0.9, 0.8, 0x3a3d4c); api.prop(desk, 0, 0.45, 7); api.nav.addBox(0, 7, 1.4, 0.8);
       this._guard = api.patroller({ color: 0x4a5a6a, waypoints: [{ x: -8, z: 4 }, { x: 0, z: 6 }, { x: 8, z: 4 }, { x: 0, z: 6 }], speed: 2.2, dwell: 2 });
+      this._guardCone = new THREE.Mesh(new THREE.CircleGeometry(2.0, 20), new THREE.MeshBasicMaterial({ color: 0xffe6a0, transparent: true, opacity: 0.14, depthWrite: false, toneMapped: false }));
+      this._guardCone.rotation.x = -Math.PI / 2; this._guardCone.position.y = 0.04; api.group.add(this._guardCone);
+      this._guardLamp = P.box(0.1, 0.1, 0.14, 0x1a1a1e, { emissive: 0xffe6a0, emissiveIntensity: 0.9, edges: false }); this._guard.mesh.add(this._guardLamp); this._guardLamp.position.set(0, 1.0, 0.3);
+
+      // loading dock + archive shelving make the back-of-house legible (plan §S5)
+      const dock = P.box(3, 2.4, 0.3, 0x2a2d38); api.prop(dock, -6, 1.2, -8.85);
+      for (let i = 0; i < 6; i++) api.prop(P.box(2.6, 0.12, 0.2, 0x3a3d48), -6, 0.4 + i * 0.36, -8.6);   // roller-door slats
+      api.mountSign(dock, 'LOADING', 0.9, 0.24, [0, 0.7, 0.18], { bg: '#2a2d38', fg: '#cde' });
+      for (const ax of [6.5, 8.2]) { const shelf = P.box(1.0, 2.2, 0.5, 0x33343e); api.prop(shelf, ax, 1.1, 8.4); for (let s = 0; s < 3; s++) api.prop(P.box(0.8, 0.4, 0.35, [0x5a4a34, 0x4a5060, 0x6a5a44][s]), ax, 0.5 + s * 0.7, 8.4); }
+      api.prop(P.labelPlaque('ARCHIVE', 0.9, 0.2, { bg: '#33343e', fg: '#cde' }), 7.3, 2.4, 8.15);
 
       // closet: screwdriver + floor map
       const closet = P.box(1.4, 2, 1.4, 0x2f3240); api.prop(closet, -10, 1, 7); api.nav.addBox(-10, 7, 1.4, 1.4);
@@ -202,6 +221,23 @@ export default function makeScene() {
             api.audio.sfx('place');
           }
         });
+      }
+      // live tally: dusting can only ever reach 11/12 — the discrepancy is visible
+      if (this._countBoard) {
+        const dusted = (api._fakeTotal || 11) - (api._fakeRemaining ?? (api._fakeTotal || 11));
+        const txt = 'DUSTED\n' + dusted + ' / 12';
+        if (txt !== this._countText) { this._countText = txt; this._countBoard.userData.label.draw(txt, { bg: '#20242f', fg: dusted >= 11 ? '#ffcf5f' : '#8ab0ff' }); }
+      }
+      // the guard's flashlight sweeps the floor ahead of him; a soft tick warns you
+      // when his beam nears the art case (timing by movement + light + sound)
+      if (this._guard && this._guardCone) {
+        const gp = this._guard.mesh.position;
+        this._guardCone.position.x = gp.x + Math.sin(this._guard.mesh.rotation.y) * 1.6;
+        this._guardCone.position.z = gp.z + Math.cos(this._guard.mesh.rotation.y) * 1.6;
+        if (this._ch && this._ch.ready('hand') && this._guard.isNear(new THREE.Vector3(-9, 0, 6), 5)) {
+          this._tick = (this._tick || 0) + dt;
+          if (this._tick > 0.6) { this._tick = 0; api.audio.sfx('thunk'); }
+        }
       }
     },
   };
