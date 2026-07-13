@@ -1,0 +1,112 @@
+/* SPOTLESS — DOM UI over a full-bleed three.js canvas.
+   Subtitle-first: everything readable and playable with sound off. */
+:root{
+  --ink:#f4efe6;
+  --dim:#b9b2a6;
+  --cyan:#38e0e6;
+  --panel:rgba(14,12,20,.82);
+  --accent:#e9a2b6;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+*{ box-sizing:border-box; }
+html,body{ margin:0; height:100%; background:#0d0b14; overflow:hidden; }
+#game-canvas{ position:fixed; inset:0; width:100vw; height:100vh; display:block; touch-action:none; }
+#ui-root{ position:fixed; inset:0; pointer-events:none; color:var(--ink); }
+#ui-root .clickable{ pointer-events:auto; }
+
+/* ---- Subtitles ---- */
+#subs{
+  position:absolute; left:50%; bottom:8%; transform:translateX(-50%);
+  width:min(860px,88vw); text-align:center; font-size:clamp(15px,2.4vw,23px);
+  line-height:1.4; text-shadow:0 2px 10px rgba(0,0,0,.9);
+  opacity:0; transition:opacity .25s; white-space:pre-line;
+}
+#subs.show{ opacity:1; }
+#subs .who{ font-size:.72em; letter-spacing:.18em; text-transform:uppercase;
+  opacity:.7; display:block; margin-bottom:.25em; }
+#subs.narrator .who{ color:var(--dim); }
+#subs.narrator{ font-style:italic; color:#efe8dc; }
+#subs.voice{ color:#ffd9a8; }
+#subs.spatial{ color:#bff3ff; text-shadow:0 0 18px rgba(120,230,255,.5),0 2px 10px #000; }
+
+/* ---- HUD ---- */
+#hud{ position:absolute; left:16px; top:14px; font-size:13px; letter-spacing:.02em;
+  text-shadow:0 1px 6px #000; user-select:none; }
+#hud .row{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+#hud .chip{ background:var(--panel); border:1px solid rgba(255,255,255,.08);
+  border-radius:20px; padding:5px 12px; display:inline-flex; gap:8px; align-items:center; }
+#hud .task{ max-width:52vw; }
+#hud .task b{ color:var(--dim); font-weight:600; letter-spacing:.14em; font-size:11px; }
+#hud .task #task.done{ color:#8fd6a0; }
+#hud .task.taskdone{ border-color:rgba(143,214,160,.4); }
+#battery{ width:34px; height:14px; border:1.5px solid var(--dim); border-radius:3px;
+  position:relative; }
+#battery::after{ content:""; position:absolute; right:-4px; top:3px; width:3px; height:6px;
+  background:var(--dim); border-radius:0 2px 2px 0; }
+#battery i{ position:absolute; inset:2px; width:70%; background:var(--cyan); border-radius:1px; }
+.lamp-glyph{ opacity:.35; transition:opacity .3s,color .3s; }
+.lamp-glyph.on{ opacity:1; color:#ffe08a; text-shadow:0 0 10px #ffcf5f; }
+.lamp-glyph.known{ opacity:.75; }
+#trash{ }
+#trashbar{ width:74px; height:8px; border:1px solid var(--dim); border-radius:4px; overflow:hidden; }
+#trashbar i{ display:block; height:100%; width:0%; background:var(--accent); transition:width .2s; }
+
+/* ---- Interaction prompt ---- */
+#prompt{ position:absolute; left:50%; bottom:20%; transform:translateX(-50%);
+  background:var(--panel); border:1px solid rgba(255,255,255,.12); border-radius:8px;
+  padding:8px 14px; font-size:14px; opacity:0; transition:opacity .15s; }
+#prompt.show{ opacity:1; }
+#prompt .key{ display:inline-block; min-width:20px; padding:1px 6px; margin-right:6px;
+  border:1px solid var(--dim); border-radius:4px; font-weight:700; font-size:12px; }
+#cleanring{ position:absolute; width:66px; height:66px; opacity:0; transition:opacity .1s; }
+#cleanring.show{ opacity:1; }
+
+/* ---- Screens (title / menu / credits) ---- */
+.screen{ position:absolute; inset:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; text-align:center; gap:18px;
+  background:radial-gradient(circle at 50% 40%, #171425, #08070d 75%);
+  pointer-events:auto; }
+.screen.hidden{ display:none; }
+.title-word{ font-size:clamp(44px,11vw,120px); letter-spacing:.42em; margin-left:.42em;
+  font-weight:300; color:var(--ink); }
+.title-sub{ color:var(--dim); font-size:14px; letter-spacing:.24em; text-transform:uppercase; }
+.btn{ pointer-events:auto; cursor:pointer; background:transparent; color:var(--ink);
+  border:1px solid rgba(255,255,255,.28); border-radius:26px; padding:11px 30px;
+  font-size:15px; letter-spacing:.12em; transition:.18s; min-width:190px; }
+.btn:hover{ background:rgba(255,255,255,.08); border-color:var(--ink); }
+.btn.primary{ border-color:var(--cyan); color:var(--cyan); }
+.menu-list{ display:flex; flex-direction:column; gap:12px; margin-top:8px; }
+
+/* settings */
+.settings{ background:var(--panel); border:1px solid rgba(255,255,255,.1);
+  border-radius:12px; padding:22px 28px; min-width:320px; text-align:left; }
+.settings h3{ margin:.2em 0 .8em; letter-spacing:.1em; font-weight:500; }
+.settings .opt{ display:flex; justify-content:space-between; align-items:center;
+  gap:20px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,.06); }
+.seg{ display:flex; border:1px solid rgba(255,255,255,.2); border-radius:16px; overflow:hidden; }
+.seg button{ pointer-events:auto; cursor:pointer; background:transparent; color:var(--dim);
+  border:0; padding:5px 12px; font-size:12px; }
+.seg button.sel{ background:var(--cyan); color:#08070d; }
+
+/* fade / letterbox */
+#fade{ position:absolute; inset:0; background:#08070d; opacity:0; transition:opacity .8s;
+  pointer-events:none; }
+#fade.show{ opacity:1; }
+#toast{ position:absolute; left:50%; top:12%; transform:translateX(-50%);
+  background:var(--panel); border:1px solid rgba(255,255,255,.14); border-radius:8px;
+  padding:8px 16px; font-size:14px; opacity:0; transition:opacity .3s; letter-spacing:.05em; }
+#toast.show{ opacity:1; }
+
+/* debug */
+#debug{ position:absolute; right:10px; top:10px; background:var(--panel);
+  border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:10px 14px;
+  font:12px/1.5 ui-monospace,monospace; color:var(--dim); white-space:pre; display:none; }
+#debug.show{ display:block; }
+
+/* credits */
+#credits{ position:absolute; inset:0; display:none; overflow:hidden; }
+#credits.show{ display:block; }
+#credits .roll{ position:absolute; left:0; right:0; text-align:center; color:var(--ink);
+  font-size:16px; line-height:2.1; }
+#credits .roll h1{ font-size:40px; letter-spacing:.4em; margin:.4em 0; font-weight:300; }
+#credits .roll .dim{ color:var(--dim); font-size:13px; letter-spacing:.15em; }

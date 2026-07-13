@@ -1,0 +1,12 @@
+{
+  "name": "spotless",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SPOTLESS — a narrator-driven puzzle game about a house robot named Dust.",
+  "type": "module",
+  "scripts": {
+    "start": "node server.cjs",
+    "test": "node --no-warnings --loader ./test/loader.mjs test/run.js",
+    "smoke": "node test/smoke.cjs"
+  }
+}

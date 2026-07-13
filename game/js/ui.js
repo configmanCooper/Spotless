@@ -1,0 +1,196 @@
+// ui.js — DOM UI over the canvas (§7, §9). Subtitles (speaker-tinted, 2-line cap),
+// HUD (task, battery, lamp glyph, trash meter), interaction prompt, clean ring,
+// title/menu/settings screens, fade/toast, credits. Fully playable sound-off.
+import * as THREE from 'three';
+
+export class UI {
+  constructor(root, game) {
+    this.root = root; this.game = game;
+    this._subTimer = 0;
+    root.innerHTML = `
+      <div id="hud">
+        <div class="row"><div class="chip task"><b>TASK</b> <span id="task">—</span></div></div>
+        <div class="row">
+          <div class="chip"><div id="battery"><i></i></div>
+            <span class="lamp-glyph" id="lampglyph" title="Lamp">💡</span></div>
+          <div class="chip" id="trash"><span>TRASH</span><div id="trashbar"><i></i></div></div>
+        </div>
+      </div>
+      <div id="prompt"><span id="promptkey" class="key">E</span><span id="prompttext"></span></div>
+      <svg id="cleanring" viewBox="0 0 66 66">
+        <circle cx="33" cy="33" r="28" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="5"/>
+        <circle id="cleanarc" cx="33" cy="33" r="28" fill="none" stroke="#38e0e6" stroke-width="5"
+          stroke-linecap="round" transform="rotate(-90 33 33)"
+          stroke-dasharray="175.9" stroke-dashoffset="175.9"/>
+      </svg>
+      <div id="subs"><span class="who"></span><span class="txt"></span></div>
+      <div id="toast"></div>
+      <div id="fade"></div>
+      <div id="debug"></div>
+      <div id="title" class="screen"></div>
+      <div id="pause" class="screen hidden"></div>
+      <div id="credits"></div>
+    `;
+    this.$ = (id) => root.querySelector(id);
+    this.subs = this.$('#subs'); this.subWho = this.subs.querySelector('.who'); this.subTxt = this.subs.querySelector('.txt');
+    this.taskEl = this.$('#task');
+    this.batteryFill = this.$('#battery i');
+    this.lampGlyph = this.$('#lampglyph');
+    this.trashFill = this.$('#trashbar i');
+    this.promptEl = this.$('#prompt'); this.promptKey = this.$('#promptkey'); this.promptTxt = this.$('#prompttext');
+    this.cleanring = this.$('#cleanring'); this.cleanarc = this.$('#cleanarc');
+    this.toastEl = this.$('#toast'); this.fadeEl = this.$('#fade');
+    this.debugEl = this.$('#debug');
+    this.titleEl = this.$('#title'); this.pauseEl = this.$('#pause'); this.creditsEl = this.$('#credits');
+    this._v = new THREE.Vector3();
+    this.setHudVisible(false);
+  }
+
+  setHudVisible(v) { this.$('#hud').style.display = v ? 'block' : 'none'; }
+
+  // ---- subtitles ----
+  showSub(text, cls = 'narrator', who = '') {
+    this.subs.className = 'show ' + cls;
+    this.subWho.textContent = who === 'narrator' ? '' : (who || '').toUpperCase();
+    this.subTxt.textContent = text;
+    this._subTimer = 0;
+  }
+  hideSub() { this.subs.className = ''; }
+  hideSubSoon() { this._subTimer = 0.01; }
+  tick(dt) {
+    if (this._subTimer > 0) { this._subTimer += dt; if (this._subTimer > 1.1) { this.hideSub(); this._subTimer = 0; } }
+  }
+
+  // ---- HUD ----
+  setTask(t) { this.taskEl.textContent = t || '—'; this.taskEl.classList.remove('done'); const p = this.taskEl.parentElement; p && p.classList.remove('taskdone'); }
+  setTaskDone(done) {
+    const p = this.taskEl.parentElement;
+    if (done) { this.taskEl.classList.add('done'); if (p) { p.classList.add('taskdone'); if (!/^✓/.test(this.taskEl.textContent)) this.taskEl.textContent = '✓ ' + this.taskEl.textContent; } }
+    else { this.taskEl.classList.remove('done'); p && p.classList.remove('taskdone'); }
+  }
+  setTrash(v) { this.trashFill.style.width = Math.round(v * 100) + '%'; }
+  setBattery(v) { this.batteryFill.style.width = Math.round(v * 70) + '%'; }
+  setBatteryArc(v) {
+    this.batteryFill.style.width = Math.round(Math.max(0, Math.min(1, v)) * 100) + '%';
+    this.batteryFill.style.background = v < 0.25 ? '#e0685a' : v < 0.5 ? '#e9c05a' : '#38e0e6';
+  }
+  setSelfPrompt(text) {
+    if (!this._selfEl) {
+      this._selfEl = document.createElement('div');
+      this._selfEl.id = 'selfprompt';
+      this._selfEl.style.cssText = 'position:absolute;left:50%;bottom:26%;transform:translateX(-50%);background:var(--panel);border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:7px 13px;font-size:14px;opacity:0;transition:opacity .15s;';
+      this.root.appendChild(this._selfEl);
+    }
+    if (!text) { this._selfEl.style.opacity = '0'; return; }
+    this._selfEl.innerHTML = `<span class="key" style="display:inline-block;min-width:20px;padding:1px 6px;margin-right:6px;border:1px solid var(--dim);border-radius:4px;font-weight:700;font-size:12px;">R</span>${text}`;
+    this._selfEl.style.opacity = '1';
+  }
+  setLampGlyph(state) { // 'dim' | 'known' | 'on'
+    this.lampGlyph.className = 'lamp-glyph' + (state === 'on' ? ' on' : state === 'known' ? ' known' : '');
+  }
+
+  setPrompt(text, mode = 'tap') {
+    if (!text) { this.promptEl.classList.remove('show'); return; }
+    this.promptEl.classList.add('show');
+    this.promptKey.textContent = mode === 'hold' ? 'E' : 'E';
+    this.promptTxt.textContent = (mode === 'hold' ? 'Hold — ' : '') + text;
+  }
+
+  setCleanRing(progress, worldPos, camera) {
+    if (!progress || !worldPos || !camera) { this.cleanring.classList.remove('show'); return; }
+    this.cleanring.classList.add('show');
+    this._v.copy(worldPos).project(camera);
+    const x = (this._v.x * 0.5 + 0.5) * window.innerWidth;
+    const y = (-this._v.y * 0.5 + 0.5) * window.innerHeight;
+    this.cleanring.style.left = (x - 33) + 'px';
+    this.cleanring.style.top = (y - 33) + 'px';
+    const C = 175.9;
+    this.cleanarc.style.strokeDashoffset = String(C * (1 - Math.min(1, progress)));
+  }
+
+  // ---- toast / fade ----
+  toast(text, ms = 2200) {
+    this.toastEl.textContent = text; this.toastEl.classList.add('show');
+    clearTimeout(this._toastT);
+    this._toastT = setTimeout(() => this.toastEl.classList.remove('show'), ms);
+  }
+  fade(on) { this.fadeEl.classList.toggle('show', on); }
+
+  // ---- title / pause / settings ----
+  showTitle(onNew, onContinue, hasSave, onSettings, onScenes) {
+    this.setHudVisible(false);
+    this.titleEl.classList.remove('hidden');
+    this.titleEl.innerHTML = `
+      <div class="title-word">SPOTLESS</div>
+      <div class="title-sub">a house robot named Dust</div>
+      <div class="menu-list">
+        ${hasSave ? '<button class="btn primary" id="t-cont">Continue</button>' : ''}
+        <button class="btn" id="t-new">${hasSave ? 'New Game' : 'Begin'}</button>
+        <button class="btn" id="t-set">Settings</button>
+        ${onScenes ? '<button class="btn" id="t-sc">Scene Select</button>' : ''}
+      </div>`;
+    this.$('#t-new').onclick = () => onNew();
+    if (hasSave) this.$('#t-cont').onclick = () => onContinue();
+    this.$('#t-set').onclick = () => onSettings();
+    if (onScenes) this.$('#t-sc').onclick = () => onScenes();
+  }
+  hideTitle() { this.titleEl.classList.add('hidden'); }
+
+  showSettings(settings, onChange, onBack) {
+    this.pauseEl.classList.remove('hidden');
+    const seg = (key, opts, cur) => `<div class="seg">${opts.map(o =>
+      `<button data-k="${key}" data-v="${o}" class="${o === cur ? 'sel' : ''}">${o}</button>`).join('')}</div>`;
+    this.pauseEl.innerHTML = `
+      <div class="settings">
+        <h3>SETTINGS</h3>
+        <div class="opt"><span>Hints</span>${seg('hints', ['normal', 'patient', 'off'], settings.hints)}</div>
+        <div class="opt"><span>Subtitles</span>${seg('subs', ['on', 'off'], settings.subs ? 'on' : 'off')}</div>
+      </div>
+      <button class="btn" id="s-back">Back</button>`;
+    this.pauseEl.querySelectorAll('.seg button').forEach(b => b.onclick = () => {
+      const k = b.dataset.k; let v = b.dataset.v;
+      if (k === 'subs') v = (v === 'on');
+      onChange(k, v);
+      b.parentElement.querySelectorAll('button').forEach(x => x.classList.remove('sel'));
+      b.classList.add('sel');
+    });
+    this.$('#s-back').onclick = () => { this.pauseEl.classList.add('hidden'); onBack && onBack(); };
+  }
+  hidePause() { this.pauseEl.classList.add('hidden'); }
+
+  showPause(onResume, onSettings, onTitle) {
+    this.pauseEl.classList.remove('hidden');
+    this.pauseEl.innerHTML = `
+      <div class="title-sub">PAUSED</div>
+      <div class="menu-list">
+        <button class="btn primary" id="p-res">Resume</button>
+        <button class="btn" id="p-set">Settings</button>
+        <button class="btn" id="p-title">Quit to Title</button>
+      </div>`;
+    this.$('#p-res').onclick = () => { this.hidePause(); onResume(); };
+    this.$('#p-set').onclick = () => onSettings();
+    this.$('#p-title').onclick = () => onTitle();
+  }
+
+  // ---- credits (ride the beam) ----
+  showCredits(lines, onEnd) {
+    this.creditsEl.classList.add('show');
+    this.setHudVisible(false);
+    const roll = document.createElement('div');
+    roll.className = 'roll';
+    roll.innerHTML = lines.map(l => l.h ? `<h1>${l.h}</h1>` :
+      `<div class="${l.dim ? 'dim' : ''}">${l.t || '&nbsp;'}</div>`).join('');
+    this.creditsEl.innerHTML = '';
+    this.creditsEl.appendChild(roll);
+    roll.style.top = window.innerHeight + 'px';
+    const start = performance.now();
+    const dur = 34000;
+    const anim = () => {
+      const k = (performance.now() - start) / dur;
+      roll.style.top = (window.innerHeight - k * (window.innerHeight + roll.offsetHeight + 200)) + 'px';
+      if (k < 1) requestAnimationFrame(anim);
+      else { this.creditsEl.classList.remove('show'); onEnd && onEnd(); }
+    };
+    requestAnimationFrame(anim);
+  }
+}

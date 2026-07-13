@@ -1,0 +1,4 @@
+node_modules/
+*.log
+test/_*.png
+test/_*.cjs
