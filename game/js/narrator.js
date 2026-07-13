@@ -16,6 +16,23 @@ export class Narrator {
     this.cur = null;
     this.onLine = null;           // optional hook(id)
     this.mode = 'narrator';       // 'narrator' | 'spatial' (S11 reveal)
+    this.scene = '';              // current scene id (for the memory log)
+    this.log = [];                // rolling STORY/VOICE transcript (plan §1 memory)
+    this.onLog = null;            // optional hook(entry) for persistence
+  }
+
+  setScene(id) { this.scene = id || ''; }
+  getLog() { return this.log.slice(-24); }
+  _record(c) {
+    if (c.category !== 'STORY' && c.category !== 'VOICE') return;
+    const text = c.text.replace(/\s*\|\s*/g, ' ').trim();
+    if (!text) return;
+    const last = this.log[this.log.length - 1];
+    if (last && last.id === c.id) return;      // no immediate dupes
+    const entry = { id: c.id, text, speaker: c.speaker, scene: this.scene };
+    this.log.push(entry);
+    if (this.log.length > 60) this.log.shift();
+    this.onLog && this.onLog(entry);
   }
 
   setHeard(arr) { this.heard = new Set(arr || []); }
@@ -103,7 +120,8 @@ export class Narrator {
   _speakClause(first = false) {
     const c = this.cur;
     const clause = c.clauses[c.idx];
-    const dwell = Math.max(CONFIG.NARR.MIN_DWELL, clause.length / CONFIG.NARR.CHARS_PER_SEC);
+    const mul = (this.ui && this.ui.subReadMul) || 1;
+    const dwell = Math.max(CONFIG.NARR.MIN_DWELL, clause.length / CONFIG.NARR.CHARS_PER_SEC) * mul;
     c.t = dwell;
     // subtitle shows the FULL line (2-line cap handled by UI); update highlight elsewhere
     const cls = c.spatial ? 'spatial' : c.speaker;
@@ -113,6 +131,7 @@ export class Narrator {
       if (c.once) this.heard.add(c.id);
       this.cooldowns.set(c.id, c.cooldown || 0);
       this.onLine && this.onLine(c.id);
+      this._record(c);
     }
   }
 

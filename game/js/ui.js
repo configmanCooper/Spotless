@@ -50,12 +50,18 @@ export class UI {
 
   // ---- subtitles ----
   showSub(text, cls = 'narrator', who = '') {
-    this.subs.className = 'show ' + cls;
+    // preserve accessibility (sub-*) classes; only swap the speaker class + show
+    if (this._lastSubCls) this.subs.classList.remove(this._lastSubCls);
+    this.subs.classList.add('show', cls);
+    this._lastSubCls = cls;
     this.subWho.textContent = who === 'narrator' ? '' : (who || '').toUpperCase();
     this.subTxt.textContent = text;
     this._subTimer = 0;
   }
-  hideSub() { this.subs.className = ''; }
+  hideSub() {
+    this.subs.classList.remove('show');
+    if (this._lastSubCls) { this.subs.classList.remove(this._lastSubCls); this._lastSubCls = null; }
+  }
   hideSubSoon() { this._subTimer = 0.01; }
   tick(dt) {
     if (this._subTimer > 0) { this._subTimer += dt; if (this._subTimer > 1.1) { this.hideSub(); this._subTimer = 0; } }
@@ -145,11 +151,16 @@ export class UI {
         <h3>SETTINGS</h3>
         <div class="opt"><span>Hints</span>${seg('hints', ['normal', 'patient', 'off'], settings.hints)}</div>
         <div class="opt"><span>Subtitles</span>${seg('subs', ['on', 'off'], settings.subs ? 'on' : 'off')}</div>
+        <div class="opt"><span>Subtitle size</span>${seg('subSize', ['small', 'normal', 'large'], settings.subSize || 'normal')}</div>
+        <div class="opt"><span>Reading speed</span>${seg('subSpeed', ['slow', 'normal', 'fast'], settings.subSpeed || 'normal')}</div>
+        <div class="opt"><span>Subtitle background</span>${seg('subOpacity', ['low', 'normal', 'high'], settings.subOpacity || 'normal')}</div>
+        <div class="opt"><span>High contrast</span>${seg('subContrast', ['on', 'off'], settings.subContrast ? 'on' : 'off')}</div>
       </div>
       <button class="btn" id="s-back">Back</button>`;
     this.pauseEl.querySelectorAll('.seg button').forEach(b => b.onclick = () => {
       const k = b.dataset.k; let v = b.dataset.v;
       if (k === 'subs') v = (v === 'on');
+      if (k === 'subContrast') v = (v === 'on');
       onChange(k, v);
       b.parentElement.querySelectorAll('button').forEach(x => x.classList.remove('sel'));
       b.classList.add('sel');
@@ -175,18 +186,52 @@ export class UI {
     this.$('#ss-back').onclick = () => { this.pauseEl.classList.add('hidden'); onBack && onBack(); };
   }
 
-  showPause(onResume, onSettings, onTitle) {
+  showPause(onResume, onSettings, onTitle, onMemory) {
     this.pauseEl.classList.remove('hidden');
     this.pauseEl.innerHTML = `
       <div class="title-sub">PAUSED</div>
       <div class="menu-list">
         <button class="btn primary" id="p-res">Resume</button>
+        ${onMemory ? '<button class="btn" id="p-mem">Memory</button>' : ''}
         <button class="btn" id="p-set">Settings</button>
         <button class="btn" id="p-title">Quit to Title</button>
       </div>`;
     this.$('#p-res').onclick = () => { this.hidePause(); onResume(); };
+    if (onMemory) this.$('#p-mem').onclick = () => onMemory();
     this.$('#p-set').onclick = () => onSettings();
     this.$('#p-title').onclick = () => onTitle();
+  }
+
+  // Memory / transcript panel (plan §1): the last STORY + VOICE lines Dust kept.
+  showMemory(entries, onBack) {
+    this.pauseEl.classList.remove('hidden');
+    const items = (entries && entries.length)
+      ? entries.slice().reverse().map(e => {
+          const who = e.speaker === 'voice' ? 'voice' : (e.speaker === 'spatial' ? 'ash' : 'ash');
+          return `<div class="mem-line ${who}"><span class="mem-txt">${this._esc(e.text)}</span></div>`;
+        }).join('')
+      : '<div class="mem-empty">Nothing kept yet. The words come later.</div>';
+    this.pauseEl.innerHTML = `
+      <div class="settings memory">
+        <h3>MEMORY</h3>
+        <div class="mem-list">${items}</div>
+      </div>
+      <button class="btn" id="mem-back">Back</button>`;
+    this.$('#mem-back').onclick = () => { this.pauseEl.classList.add('hidden'); onBack && onBack(); };
+  }
+  _esc(s) { return String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])); }
+
+  // Apply subtitle accessibility settings (size / speed / opacity / contrast).
+  applySubtitleSettings(s) {
+    if (!s) return;
+    const cl = this.subs.classList;
+    cl.remove('sub-sm', 'sub-lg', 'sub-op-low', 'sub-op-high', 'sub-contrast');
+    if (s.subSize === 'small') cl.add('sub-sm');
+    else if (s.subSize === 'large') cl.add('sub-lg');
+    if (s.subOpacity === 'low') cl.add('sub-op-low');
+    else if (s.subOpacity === 'high') cl.add('sub-op-high');
+    if (s.subContrast) cl.add('sub-contrast');
+    this.subReadMul = s.subSpeed === 'slow' ? 1.45 : (s.subSpeed === 'fast' ? 0.72 : 1);
   }
 
   // ---- credits (ride the beam) ----

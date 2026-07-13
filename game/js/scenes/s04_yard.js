@@ -53,7 +53,8 @@ export default function makeScene() {
       this._spawnT += dt;
       if (this._spawnT > 1.4) { this._spawnT = 0; this._spawnLeaf(api); }
       this._barkT += dt;
-      if (this._barkT > 12) { this._barkT = 0; api.narrator.say('neighbor_1', { category: 'VOICE' }); }
+      // Silence the neighbor once the player commits to stillness (plan §1 silence).
+      if (this._barkT > 12 && this._stillT < 2 && !this._still1) { this._barkT = 0; api.narrator.say('neighbor_1', { category: 'VOICE' }); }
 
       const p = api.world.dust.position;
       const moved = p.distanceTo(this._last); this._last.copy(p);

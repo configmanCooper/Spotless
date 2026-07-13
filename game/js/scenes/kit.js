@@ -39,6 +39,20 @@ export function createApi(core, group, onSolve) {
     spatialSource(pos) { core.setSpatialSource && core.setSpatialSource(pos); },
     say(id, opts) { return api.narrator.say(id, opts); },
 
+    // ---- action-sensitive hints (plan §1): a specific nudge fired by the scene
+    // when it detects a repeated misunderstanding, instead of waiting for the
+    // timer ladder. `wrongTry(kind, nudgeId)` counts wrong attempts of a kind and
+    // fires the nudge after `after` tries; a correct move should call resetWrong.
+    _wrongCounts: {},
+    nudge(id, opts = {}) { return api.narrator.say(id, Object.assign({ category: 'HINT', cooldown: opts.cooldown ?? 22 }, opts)); },
+    wrongTry(kind, nudgeId, opts = {}) {
+      const after = opts.after ?? 3;
+      api._wrongCounts[kind] = (api._wrongCounts[kind] || 0) + 1;
+      if (api._wrongCounts[kind] >= after) { api._wrongCounts[kind] = 0; return api.nudge(nudgeId, { cooldown: opts.cooldown ?? 25 }); }
+      return false;
+    },
+    resetWrong(kind) { api._wrongCounts[kind] = 0; },
+
     // ---- geometry helpers ----
     prop(mesh, x = 0, y = 0, z = 0) { mesh.position.set(x, y, z); group.add(mesh); return mesh; },
     wall(cx, cz, w, d, hex, h = 1.6) {

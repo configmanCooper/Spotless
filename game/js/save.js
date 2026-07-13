@@ -6,9 +6,11 @@ const DEFAULT = {
   scene: 's00_party',
   flags: {},
   linesHeard: [],
+  memoryLog: [],         // rolling STORY/VOICE transcript (plan §1 memory panel)
   solveTimes: {},        // sceneId -> {solveTime, hints}
   scenesDone: [],
-  settings: { hints: 'normal', subs: true, master: 0.9 },
+  settings: { hints: 'normal', subs: true, master: 0.9,
+    subSize: 'normal', subSpeed: 'normal', subOpacity: 'normal', subContrast: false },
 };
 
 const MIGRATIONS = {

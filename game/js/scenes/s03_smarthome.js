@@ -155,7 +155,11 @@ export default function makeScene() {
 
     _checkCode(api) {
       if (this.vaultOpen) return;
-      if (this._code.every((v, i) => v === this.CODE[i])) { this._breadMesh.visible = true; this._ch.advance('code'); }
+      if (this._code.every((v, i) => v === this.CODE[i])) { this._breadMesh.visible = true; this._ch.advance('code'); this._codeSolved = true; }
+      else if (this._ch.ready('code')) {
+        // action-sensitive nudge: repeated wrong combos point back to the date clue
+        api.wrongTry('s3code', 's3_code_nudge', { after: 16, cooldown: 30 });
+      }
     },
 
     update() {},

@@ -38,7 +38,10 @@ class Game {
     try { script = await (await fetch('js/narrator_script.json')).json(); } catch {}
     this.narrator = new Narrator({ ui: this.ui, audio: this.audio, script });
     this.narrator.setHeard(this.state.linesHeard);
+    this.narrator.log = Array.isArray(this.state.memoryLog) ? this.state.memoryLog.slice(-60) : [];
+    this.narrator.onLog = () => { this.state.memoryLog = this.narrator.log; };
     this.hints = new Hints({ narrator: this.narrator, settings: this.settings });
+    this.ui.applySubtitleSettings(this.settings);
 
     this.world = new World({
       scene: this.renderer.scene, nav: this.nav, interact: this.interact,
@@ -77,7 +80,10 @@ class Game {
     );
   }
 
-  _setSetting(k, v) { this.settings[k] = v; this.save.save(this.state); }
+  _setSetting(k, v) {
+    this.settings[k] = v; this.save.save(this.state);
+    if (k.startsWith('sub')) this.ui.applySubtitleSettings(this.settings);
+  }
 
   _disposeGroup(group) { try { disposeGroup(group); } catch {} }
 
@@ -123,6 +129,7 @@ class Game {
     this.renderer.scene.add(this.group);
     this.scene = makeSceneById(id);
     this.state.scene = id; this.save.save(this.state);
+    this.narrator.setScene(id);
 
     const core = {
       world: this.world, nav: this.nav, interact: this.interact,
@@ -235,15 +242,17 @@ class Game {
   }
 
   _togglePause() {
-    if (this.mode === 'play') {
-      this.mode = 'paused'; this.input.enabled = false;
-      this.ui.showPause(
-        () => { this.mode = 'play'; this.input.enabled = true; },
-        () => this.ui.showSettings(this.settings, (k, v) => this._setSetting(k, v),
-          () => this.ui.showPause(() => { this.mode = 'play'; this.input.enabled = true; }, () => {}, () => this._quitToTitle())),
-        () => this._quitToTitle(),
-      );
-    } else if (this.mode === 'paused') { this.mode = 'play'; this.input.enabled = true; this.ui.hidePause(); }
+    if (this.mode === 'play') { this.mode = 'paused'; this.input.enabled = false; this._openPause(); }
+    else if (this.mode === 'paused') { this.mode = 'play'; this.input.enabled = true; this.ui.hidePause(); }
+  }
+  _resumeFromPause() { this.mode = 'play'; this.input.enabled = true; }
+  _openPause() {
+    this.ui.showPause(
+      () => this._resumeFromPause(),
+      () => this.ui.showSettings(this.settings, (k, v) => this._setSetting(k, v), () => this._openPause()),
+      () => this._quitToTitle(),
+      () => this.ui.showMemory(this.narrator.getLog(), () => this._openPause()),
+    );
   }
   _quitToTitle() {
     this.ui.hidePause(); this.save.save(this.state);

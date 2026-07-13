@@ -114,3 +114,21 @@ html,body{ margin:0; height:100%; background:#0d0b14; overflow:hidden; }
 /* scene select list (plan §3 UI) */
 .scene-select .menu-list { max-height: 60vh; overflow-y: auto; gap: 6px; }
 .scene-select .menu-list .btn { min-width: 240px; }
+
+/* subtitle accessibility variants (plan §1) */
+#subs.sub-sm{ font-size:clamp(13px,1.9vw,18px); }
+#subs.sub-lg{ font-size:clamp(20px,3.1vw,32px); }
+#subs.sub-op-low .txt{ background:rgba(6,8,12,.32); }
+#subs.sub-op-high .txt{ background:rgba(4,6,10,.78); }
+#subs.sub-op-low .txt, #subs.sub-op-high .txt{ padding:.18em .6em; border-radius:8px; box-decoration-break:clone; -webkit-box-decoration-break:clone; }
+#subs.sub-contrast{ color:#fff !important; font-style:normal; text-shadow:0 2px 6px #000,0 0 2px #000; }
+#subs.sub-contrast .txt{ background:rgba(0,0,0,.82); padding:.18em .6em; border-radius:8px; box-decoration-break:clone; -webkit-box-decoration-break:clone; }
+#subs.sub-contrast .who{ color:#ffe08a !important; opacity:1; }
+
+/* memory / transcript panel (plan §1) */
+.memory .mem-list{ max-height:58vh; overflow-y:auto; text-align:left; width:min(680px,86vw);
+  display:flex; flex-direction:column; gap:10px; padding:4px 6px 4px 2px; }
+.mem-line{ line-height:1.4; padding-left:12px; border-left:2px solid rgba(255,255,255,.14); }
+.mem-line.ash{ color:#efe8dc; font-style:italic; }
+.mem-line.voice{ color:#ffd9a8; font-style:normal; }
+.mem-empty{ color:var(--dim); font-style:italic; }
