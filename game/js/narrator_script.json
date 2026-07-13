@@ -111,6 +111,10 @@
   "s2_unstamped": { "category": "REACT", "cooldown": 6, "text": "The chute spat it back. | No postage, no mercy." },
   "s2_solve": { "category": "STORY", "once": true, "text": "The chute took it with a whoosh. | Some things are only lost if you're the one who stops them." },
   "s2_carbon": { "category": "REACT", "once": true, "text": "Mercifully, the man wrote in duplicate — and stamped the copy. | People who are sorry usually do." },
+  "s2_memo_1": { "category": "VOICE", "speaker": "voice", "text": "Re: synergy. | Action items to be actioned. | File under file." },
+  "s2_memo_2": { "category": "VOICE", "speaker": "voice", "text": "Per my last memo about the previous memo. | Circle back. | Circle back to the circling." },
+  "s2_memo_3": { "category": "VOICE", "speaker": "voice", "text": "Q3 alignment of the alignment. | No further action required. | No action was ever required." },
+  "s2_memo_4": { "category": "VOICE", "speaker": "voice", "text": "This page intentionally means nothing. | You could feel it, shredding it. | So could I." },
   "s2_reclaim": { "category": "STORY", "once": true, "text": "One notice in the pile had my series number on it. | He didn't read it aloud. | Good." },
 
   "s3_h1": { "category": "HINT", "text": "The house opens for smoke — | but only smoke it can hear." },

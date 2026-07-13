@@ -33,10 +33,33 @@ export default function makeScene() {
       api.use({ id: 'door', mesh: door, pos: new THREE.Vector3(0, 0.8, 8), reach: 2.2, prompt: 'try the door',
         available: () => !api.solved, onUse: (a) => { a.audio.sfx('error'); a.narrator.say('os_2', { category: 'VOICE' }); } });
 
-      // kitchen: toaster + safety card
+      // ---- smart-home fittings (plan §S3): routine made observable, plus curtains,
+      // dormant screens, status dots, an air vent, and six years of dust at the edges
+      const routinePanel = P.box(1.7, 0.62, 0.08, 0x14181a); api.prop(routinePanel, -2, 2.0, -7.82);
+      api.mountSign(routinePanel, 'MORNING ROUTINE', 1.5, 0.16, [0, 0.22, 0.06], { bg: '#0e1416', fg: '#7fd0c0' });
+      this._routineLamps = [];
+      ['TIDY', 'QUIET', 'FED', 'AIR'].forEach((lbl, i) => {
+        const d = P.box(0.11, 0.11, 0.05, 0x3a2a2a, { emissive: 0x1a0808, emissiveIntensity: 0.6, edges: false }); api.prop(d, -2.7 + i * 0.46, 1.94, -7.78);
+        api.mountSign(routinePanel, lbl, 0.34, 0.1, [-0.7 + i * 0.46, -0.06, 0.06], { bg: '#14181a', fg: '#9ab', frame: false });
+        this._routineLamps.push(d);
+      });
+      // curtained windows on the side walls (immaculate, still drawn after six years)
+      for (const sx of [-1, 1]) { api.prop(P.box(0.1, 1.6, 1.6, 0x8a94a0, { rough: 0.7 }), sx * 8.85, 1.4, -3); api.prop(P.box(0.14, 1.7, 0.3, 0x5a6472), sx * 8.8, 1.5, -3.8); api.prop(P.box(0.14, 1.7, 0.3, 0x5a6472), sx * 8.8, 1.5, -2.2); }
+      // dormant household screens (dark wall panels) + green smart-status dots
+      for (const [sx, sz] of [[-8.85, 4], [8.85, 4]]) { api.prop(P.box(0.06, 0.8, 1.2, 0x101216, { emissive: 0x0a1416, emissiveIntensity: 0.3, edges: false }), sx, 1.6, sz); }
+      this._smartDots = [];
+      for (const [dx, dy, dz] of [[-8.8, 2.4, 4], [8.8, 2.4, 4], [0, 2.6, -7.8]]) { const dot = P.box(0.07, 0.07, 0.05, 0x14301a, { emissive: 0x2abf5a, emissiveIntensity: 0.8, edges: false }); api.prop(dot, dx, dy, dz); this._smartDots.push(dot); }
+      // an air vent with slats that breathe
+      this._ventLouvers = [];
+      const ventFrame = P.box(1.0, 0.6, 0.06, 0x2a2c30); api.prop(ventFrame, 0, 2.4, -7.83);
+      for (let i = 0; i < 5; i++) { const lv = P.box(0.86, 0.07, 0.04, 0x3a3d42, { edges: false }); api.prop(lv, 0, 2.6 - i * 0.1, -7.79); this._ventLouvers.push(lv); }
+      // abandonment: dusty grime patches in the corners the house never cleans
+      for (const [gx, gz] of [[-8, -7], [8, -7], [-8, 7], [8, 7]]) { const grime = P.mess('crumb', 0x4a453a); grime.scale.setScalar(1.6); api.prop(grime, gx, 0.06, gz); }
+
+      // kitchen: toaster + safety card (card mounted on the counter, facing you)
       const counter = P.box(3, 0.9, 1, 0x6a5a44); api.prop(counter, -3, 0.45, -4); api.nav.addBox(-3, -4, 3, 1);
       const toaster = P.items.toaster(0x9aa2ac); api.prop(toaster, -3, 1.06, -4); this._toaster = toaster;
-      api.prop(P.labelPlaque('SAFETY: in case of\nsmoke I open EVERYTHING', 1.3, 0.5, { bg: '#f3ead2', fg: '#b23a2a' }), -3, 1.5, -4.45);
+      api.mountSign(counter, 'SAFETY: in case of\nsmoke I open EVERYTHING', 1.1, 0.42, [0, 0.05, 0.55], { bg: '#f3ead2', fg: '#b23a2a' });
 
       // cushions (routine step 1)
       for (let i = 0; i < 3; i++) {
@@ -49,7 +72,7 @@ export default function makeScene() {
       const closet = api.door(-8.6, 2, 0.3, 3, 0x3a352a, 2);
       const bin = P.box(0.8, 0.8, 0.6, 0x5a5040); api.prop(bin, -7.6, 0.4, 2);
       const plugfuse = P.items.fuse(0xffd777); plugfuse.visible = false; api.prop(plugfuse, -7.6, 0.9, 2); this._plugfuse = plugfuse;
-      api.prop(P.labelPlaque('CONFISCATED', 0.8, 0.2, { bg: '#5a5040', fg: '#f3d' }), -7.6, 1.0, 1.6);
+      api.mountSign(bin, 'CONFISCATED', 0.6, 0.16, [0, 0.1, 0.32], { bg: '#5a5040', fg: '#f3d0d0' });
 
       // guest-room clock + battery, piano-room metronome, clockspot
       const clock = P.items.clock(0x6a5a44); api.prop(clock, 7, 1.0, -6); this._clock = clock;
@@ -59,7 +82,7 @@ export default function makeScene() {
 
       // bread vault (a cabinet) with a 4-digit dial bank on a stand IN FRONT of it
       const vault = P.box(2.4, 1.3, 0.6, 0x5a4a34, { emissive: 0x120c04 }); api.prop(vault, 2.2, 0.65, -6.9); api.nav.addBox(2.2, -6.9, 2.4, 0.6);
-      api.prop(P.labelPlaque('BREAD VAULT', 1.1, 0.24, { bg: '#5a4a34', fg: '#e8dcc0' }), 2.2, 1.55, -6.9);
+      api.mountSign(vault, 'BREAD VAULT', 1.0, 0.22, [0, 0.5, 0.32], { bg: '#5a4a34', fg: '#e8dcc0' });
       api.prop(P.labelPlaque('HAPPY 40TH!\nMARCH 3rd', 1.3, 0.6, { bg: '#c9b98a', fg: '#5a3a1a' }), -6, 2.2, -7.7);   // garage banner
       api.prop(P.labelPlaque('MARCH\n1  2  (3)  4  5', 1.1, 0.6, { bg: '#d8cdae', fg: '#4a4030' }), 6, 1.9, -7.7);      // calendar: the 3rd is ringed
       const dialStand = P.box(2.6, 0.5, 0.5, 0x3a3026); api.prop(dialStand, 2.2, 0.25, -6.0); api.nav.addBox(2.2, -6.0, 2.6, 0.5);
@@ -162,6 +185,20 @@ export default function makeScene() {
       }
     },
 
-    update() {},
+    update(dt, api) {
+      const ch = this._ch; if (!ch) return;
+      // routine indicator lamps light green as each stage is obeyed (state observable)
+      if (this._routineLamps) {
+        const st = [ch.done('fluff'), ch.done('battery'), ch.done('code'), ch.done('burn') || api.solved];
+        this._routineLamps.forEach((d, i) => {
+          if (st[i] && !d.userData.on) { d.userData.on = true; d.material = P.mat(0x2abf5a, { emissive: 0x1a8a40, emissiveIntensity: 1.1, edges: false }); api.audio.sfx('pick'); }
+        });
+      }
+      // the vent slats breathe gently
+      if (this._ventLouvers && !api.world.reducedMotion) {
+        this._vt = (this._vt || 0) + dt;
+        this._ventLouvers.forEach((lv, i) => { lv.scale.y = 1 + Math.sin(this._vt * 1.5 + i * 0.6) * 0.3; });
+      }
+    },
   };
 }

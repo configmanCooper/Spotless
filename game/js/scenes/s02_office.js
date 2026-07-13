@@ -30,8 +30,19 @@ export default function makeScene() {
 
       const desk = P.box(4, 0.9, 2, 0x5a4a30); api.prop(desk, 0, 0.45, -3.5); api.nav.addBox(0, -3.5, 4, 2);
       const inTray = P.box(1, 0.1, 0.7, 0x8a7a4a); api.prop(inTray, -1.2, 0.95, -3.2);
-      api.prop(P.labelPlaque('IN', 0.4, 0.24), -1.2, 1.2, -3.6);
-      for (let i = 0; i < 4; i++) { const m = P.box(0.7, 0.02, 0.5, 0xe8e0c8); api.prop(m, -1.2, 1.02 + i * 0.03, -3.2); }
+      api.mountSign(inTray, 'IN', 0.32, 0.2, [0, 0.14, 0.36], {});
+      // several IN-tray memos you can actually pick up and shred — a hollow little
+      // busywork loop the assignment wants, before you reject it (plan §S2)
+      this._shredCount = 0;
+      for (let i = 0; i < 4; i++) {
+        const m = P.box(0.7, 0.02, 0.5, [0xe8e0c8, 0xe0d6b8, 0xece4cc, 0xdcd0b0][i]); api.prop(m, -1.2, 1.02 + i * 0.03, -3.2);
+        api.use({ id: 'memo_' + i, mesh: m, pos: new THREE.Vector3(-1.2, 1.02 + i * 0.03, -3.2), reach: 1.6, pickable: true, dropY: 1.0,
+          prompt: 'take an IN-tray memo', memoIndex: i });
+      }
+
+      // warm task light over the desk, focused on the handwritten letter
+      const deskLamp = new THREE.PointLight(0xffdca0, 2.6, 6, 1.6); deskLamp.position.set(0, 2.2, -3); api.group.add(deskLamp);
+      api.prop(P.box(0.3, 0.1, 0.3, 0x1a1712, { emissive: 0xffdca0, emissiveIntensity: 0.4, edges: false }), 0, 2.35, -3);
 
       // the letter (stationary target; torn corner)
       const letter = P.items.paper(0xf4e8c0); api.prop(letter, 0, 1.0, -3.0);
@@ -40,17 +51,17 @@ export default function makeScene() {
 
       // OUT tray + chute
       const outTray = P.box(1, 0.1, 0.7, 0x6a6a5a, { rough: 1 }); api.prop(outTray, 1.6, 0.95, -3.2);
-      api.prop(P.labelPlaque('OUT', 0.5, 0.24, { bg: '#c9c0a4' }), 1.6, 1.2, -3.6);
+      api.mountSign(outTray, 'OUT', 0.32, 0.2, [0, 0.14, 0.36], { bg: '#c9c0a4' });
       const chute = P.box(0.6, 1.4, 0.4, 0x4a4636); api.prop(chute, 3.4, 1.2, -4);
 
       // shredder + its output bin (clean-target, 3 stages)
       const shred = P.box(0.9, 1, 0.7, 0x2a2a24, { emissive: 0x120600 }); api.prop(shred, -4, 0.5, -3); api.nav.addBox(-4, -3, 0.9, 0.7);
-      api.prop(P.labelPlaque('SHREDDER', 0.9, 0.24, { bg: '#c9433f', fg: '#fff' }), -4, 1.2, -3);
+      api.mountSign(shred, 'SHREDDER', 0.72, 0.2, [0, 0.35, 0.37], { bg: '#c9433f', fg: '#fff' });
       const pile = P.mess('crumb', 0xd8cc9e); pile.scale.setScalar(2.2); api.prop(pile, -4, 0.2, -2.2); this._pile = pile;
 
       // tape dispenser (desk 3)
       const disp2 = P.box(0.5, 0.3, 0.4, 0x4a5560, { emissive: 0x0a1015 }); api.prop(disp2, 5, 0.9, 2); api.nav.addBox(5, 2, 0.5, 0.4);
-      api.prop(P.labelPlaque('TAPE', 0.4, 0.2, { bg: '#4a5560', fg: '#cde' }), 5, 1.2, 2);
+      api.mountSign(disp2, 'TAPE', 0.34, 0.16, [0, 0.05, 0.22], { bg: '#4a5560', fg: '#cde' });
 
       // handbook plaque hiding the drawer key
       const handbook = P.labelPlaque('WE BELIEVE IN\nTRANSPARENCY', 1.2, 0.5, { bg: '#d8cdae', fg: '#4a4030' });
@@ -61,7 +72,24 @@ export default function makeScene() {
 
       // chute router lever (copy room)
       const router = P.items.lever(0x5a5030, 0x8a8a4a); api.prop(router, 7, 0.7, -6); api.nav.addBox(7, -6, 0.4, 0.4);
-      api.prop(P.labelPlaque('CHUTE:\nMAIL / TRASH', 1, 0.4, { bg: '#33301f', fg: '#e8e0c8' }), 7, 1.7, -6);
+      api.mountSign(router, 'CHUTE:\nMAIL / TRASH', 0.8, 0.34, [0, 0.9, 0], { bg: '#33301f', fg: '#e8e0c8' });
+
+      // ---- office density: fluorescent strips, copier glow, cubicles, chairs ----
+      for (const fx of [-4.5, 0, 4.5]) { const strip = P.box(3, 0.1, 0.5, 0x14140e, { emissive: 0xdfe8c8, emissiveIntensity: 0.7, edges: false }); api.prop(strip, fx, 3.4, -1); }
+      const flo = new THREE.PointLight(0xeef2d8, 1.1, 18, 1.5); flo.position.set(0, 3.2, -1); api.group.add(flo);
+      // a copier with a cycling scan glow
+      const copier = P.box(1.2, 1.3, 1, 0x6a6a62); api.prop(copier, -7, 0.65, 3); api.nav.addBox(-7, 3, 1.2, 1);
+      this._copierGlow = P.box(1.0, 0.05, 0.8, 0x14141a, { emissive: 0x3fa0c0, emissiveIntensity: 0.6, edges: false }); api.prop(this._copierGlow, -7, 1.33, 3);
+      api.mountSign(copier, 'COPIER', 0.7, 0.18, [0, 0.1, 0.52], { bg: '#3a3a34', fg: '#cde' });
+      // cubicle partitions + monitors (background dressing)
+      for (const [cx, cz] of [[-7, -4], [7, 3], [7, 6]]) {
+        api.prop(P.box(2.2, 1.3, 0.12, 0x6a6450), cx, 0.65, cz);
+        api.prop(P.box(0.12, 1.3, 1.6, 0x6a6450), cx + (cx > 0 ? -1 : 1), 0.65, cz - 0.8);
+        const mon = P.box(0.5, 0.4, 0.08, 0x1a1a1e, { emissive: 0x14343a, emissiveIntensity: 0.5, edges: false }); api.prop(mon, cx, 1.05, cz - 0.55);
+        const chair = P.box(0.5, 0.9, 0.5, 0x2a2a30); api.prop(chair, cx, 0.45, cz - 1.4);
+      }
+      // paper trail scattered across the floor (flavor clutter)
+      for (let i = 0; i < 8; i++) { const p = P.box(0.3, 0.01, 0.22, 0xd8d0b4, { edges: false }); p.rotation.y = Math.random() * 3; api.prop(p, -8 + Math.random() * 16, 0.02, -6 + Math.random() * 12); }
 
       const ch = api.chain([
         { name: 'readletter', clue: letter, beat: 's2_step_read' },
@@ -124,6 +152,14 @@ export default function makeScene() {
         id: 'shredder', mesh: shred, pos: new THREE.Vector3(-4, 0.5, -3), reach: 1.8, prompt: 'shred',
         acceptCarry: (item, a) => {
           a.audio.sfx('dump');
+          if (String(item.id).startsWith('memo_')) {
+            // the assignment, performed: shred a memo, get a hollow corporate line
+            const lines = ['s2_memo_1', 's2_memo_2', 's2_memo_3', 's2_memo_4'];
+            a.narrator.say(lines[Math.min(this._shredCount, lines.length - 1)], { category: 'VOICE' });
+            this._shredCount++;
+            item.mesh && item.mesh.parent && item.mesh.parent.remove(item.mesh); a.interact.remove(item);
+            return true;
+          }
           if (item.id === 'letter' && !this._carbon) {
             this._carbon = true;
             const carbon = P.box(0.36, 0.03, 0.26, 0xf0ead2); const cs = P.box(0.1, 0.02, 0.08, 0xc94a4a); cs.position.set(0.1, 0.02, -0.08); carbon.add(cs);
@@ -193,6 +229,11 @@ export default function makeScene() {
       api.narrator.line('Shred everything in the IN tray before morning.', { id: 'boss_vm', category: 'VOICE', speaker: 'boss' });
     },
 
-    update() {},
+    update(dt, api) {
+      if (this._copierGlow && !api.world.reducedMotion) {
+        this._ct = (this._ct || 0) + dt;
+        this._copierGlow.material.emissiveIntensity = 0.4 + 0.4 * Math.pow(Math.max(0, Math.sin(this._ct * 1.6)), 3);
+      }
+    },
   };
 }
