@@ -131,6 +131,16 @@ export default function makeScene() {
       ]);
 
       // initial messes
+      // no-spawn footprints for decorative solids that (deliberately) carry no nav
+      // box — so a mess is never left sitting under a counter, present, or guest.
+      this._noSpawn = [
+        { minX: 1.8, maxX: 4.2, minZ: -3.5, maxZ: -2.5 },   // kitchen counter
+        { minX: 5.9, maxX: 6.7, minZ: 3.0, maxZ: 3.8 },     // present 1
+        { minX: 6.2, maxX: 7.0, minZ: 2.2, maxZ: 3.0 },     // present 2
+        { minX: 4.4, maxX: 5.6, minZ: 3.8, maxZ: 5.0 },     // host
+        { minX: -2.7, maxX: -1.3, minZ: -2.7, maxZ: -1.3 }, // the girl
+        { minX: -6.4, maxX: -4.6, minZ: -0.7, maxZ: 0.3 },  // tv / stand
+      ];
       this._messes = [];
       for (let i = 0; i < 5; i++) this._spawnMess(api);
 
@@ -144,12 +154,13 @@ export default function makeScene() {
       const kinds = ['spill', 'cup', 'crumb'];
       const k = kinds[(Math.random() * kinds.length) | 0];
       const m = P.mess(k, k === 'spill' ? 0xb08a6a : k === 'cup' ? 0xd8d2c0 : 0xcaa06a);
-      // pick a spot the robot can actually reach (not inside/behind furniture)
-      let x = 0, z = 0;
-      for (let tries = 0; tries < 20; tries++) {
-        x = -7 + Math.random() * 14; z = -3.5 + Math.random() * 8;
-        if (!this._navBlocked(api, x, z)) break;
+      // pick a spot the robot can reach that's clear of furniture, walls, and props
+      let x = 0, z = 0, ok = false;
+      for (let tries = 0; tries < 40; tries++) {
+        x = -6.5 + Math.random() * 13; z = -3.2 + Math.random() * 7.2;   // inside the room, off the walls
+        if (!this._navBlocked(api, x, z)) { ok = true; break; }
       }
+      if (!ok) return;   // never drop a mess in a bad spot
       api.prop(m, x, m.position.y, z);
       const e = api.clean({
         id: 'mess_' + Math.random().toString(36).slice(2, 6), mesh: m,
@@ -164,8 +175,9 @@ export default function makeScene() {
     },
 
     _navBlocked(api, x, z) {
-      const r = 0.5;
+      const r = 0.55;
       for (const o of api.nav.obstacles) if (x + r > o.minX && x - r < o.maxX && z + r > o.minZ && z - r < o.maxZ) return true;
+      for (const o of (this._noSpawn || [])) if (x + r > o.minX && x - r < o.maxX && z + r > o.minZ && z - r < o.maxZ) return true;
       return false;
     },
 
