@@ -226,9 +226,35 @@ export function labelPlaque(text, w = 1.1, h = 0.5, o = {}) {
   });
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w * scale, h * scale),
     new THREE.MeshStandardMaterial({ map: t.texture, roughness: 0.85, emissive: 0x1a160f, emissiveMap: t.texture, emissiveIntensity: 0.25 }));
+  // A physical bezel behind the text so a sign reads as a mounted placard/screen
+  // rather than floating debug text (plan §3: integrate signage into fixtures).
+  if (o.frame !== false) {
+    const bez = new THREE.Mesh(new THREE.BoxGeometry(w * scale * 1.1, h * scale * 1.22, 0.05),
+      mat(o.frameColor ?? 0x2a241a, { rough: 0.9, metal: 0.15 }));
+    bez.position.z = -0.035; bez.raycast = () => {};
+    addEdges(bez);
+    m.add(bez);
+  }
   if (o.tilt !== false) m.rotation.x = -0.32;  // lean toward the camera for readability
   m.userData.label = t;
   return m;
+}
+
+// A freestanding sign on a slim post rising from the floor — for directional or
+// wayfinding signage that would otherwise hover in mid-air (plan §3 signage).
+export function postSign(text, w = 1.0, h = 0.4, o = {}) {
+  const g = new THREE.Group();
+  const sign = labelPlaque(text, w, h, Object.assign({ tilt: false }, o));
+  const signY = o.signY ?? 1.4;
+  sign.position.y = signY;
+  g.add(sign);
+  const postH = signY - (h * (o.scale ?? 1.35)) / 2;
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.055, postH, 8), mat(o.postColor ?? 0x3a352c, { rough: 0.8, metal: 0.3 }));
+  post.position.y = postH / 2; addEdges(post); g.add(post);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.06, 10), mat(o.postColor ?? 0x3a352c, { rough: 0.8 }));
+  base.position.y = 0.03; g.add(base);
+  g.userData.label = sign.userData.label;
+  return g;
 }
 
 // A generic "mess" blob (spill/cup/crumb/leaf) — small, on the floor.

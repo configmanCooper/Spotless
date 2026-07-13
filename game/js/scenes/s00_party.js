@@ -19,6 +19,13 @@ export default function makeScene() {
       const rug = new THREE.Mesh(new THREE.CircleGeometry(3.2, 24), P.mat(0x6a3a4a, { rough: 1, edges: false })); rug.rotation.x = -Math.PI / 2; api.prop(rug, 2.5, 0.012, 1.5);
       // yard/road strip to the south is a lighter ground
       const road = P.box(10, 0.02, 8, 0x3a3540); api.prop(road, 0, 0.011, -11);
+      // a night road that recedes into the dark, with a lone streetlamp — no prompt
+      // ever points here, but futility slowly makes its pool of light more inviting
+      const farRoad = P.box(6, 0.02, 16, 0x2a2732); api.prop(farRoad, 0, 0.009, -20);
+      const lampPost = P.box(0.16, 4, 0.16, 0x23212a); api.prop(lampPost, -3.5, 2, -10.5);
+      const lampHead = P.box(0.5, 0.24, 0.5, 0x14141a, { emissive: 0xbfd0ff, emissiveIntensity: 0.6, edges: false }); api.prop(lampHead, -3.5, 3.9, -10.5);
+      this._streetLight = new THREE.PointLight(0xbfd0ff, 1.4, 10, 1.4); this._streetLight.position.set(-3.5, 3.6, -10.5); api.group.add(this._streetLight);
+      this._roadGlow = P.glowSprite(0xbfd0ff); this._roadGlow.position.set(0, 0.3, -12); this._roadGlow.material.opacity = 0.0; this._roadGlow.scale.setScalar(2.4); api.group.add(this._roadGlow);
 
       // house shell: a few rooms
       api.wall(0, 5, 18, 0.3, pal.wall);      // back
@@ -34,8 +41,9 @@ export default function makeScene() {
       // streamers strung along the back wall
       const strCols = [0xe98db0, 0xffe06b, 0x8bafff, 0x8bff9a];
       for (let i = 0; i < 4; i++) api.prop(P.streamer(-8 + i * 4, 4.2, 4.7, -4 + i * 4, 4.2, 4.7, strCols[i], 0.6), 0, 0, 0);
-      // balloons in the corners and by the cake
-      [[-8, 4], [8.2, 4], [-8, -3.5], [4.6, 3.2], [0.6, 3.2]].forEach((p, i) => api.prop(P.items.balloon(strCols[i % 4]), p[0], 0, p[1]));
+      // balloons in the corners and by the cake (kept for music-reactive bobbing)
+      this._balloons = [];
+      [[-8, 4], [8.2, 4], [-8, -3.5], [4.6, 3.2], [0.6, 3.2]].forEach((p, i) => { const b = P.items.balloon(strCols[i % 4]); api.prop(b, p[0], 0, p[1]); this._balloons.push({ mesh: b, baseY: b.position.y, phase: i }); });
 
       // ---- CAKE on the table (the birthday centerpiece) ----
       const table = P.box(1.8, 0.5, 1.2, 0x7a5a4a); api.prop(table, 5, 0.25, 3.2); api.nav.addBox(5, 3.2, 1.8, 1.2);
@@ -49,8 +57,23 @@ export default function makeScene() {
       const tv = P.items.tv(0x14141a); api.prop(tv, -5.5, 0, -0.2); this._tv = tv; api.nav.addBox(-5.5, -0.2, 1.6, 0.4);
       const tvStand = P.box(1.6, 0.5, 0.4, 0x3a2f28); api.prop(tvStand, -5.5, 0.25, -0.2);
 
-      // kitchen counter (right of the divider)
+      // kitchen counter + appliances (a clear KITCHEN identity, right of divider)
       api.prop(P.box(2.4, 0.7, 1.0, 0x6b5545), 3, 0.35, -3);
+      const fridge = P.box(0.9, 1.8, 0.8, 0xd8d8dc, { rough: 0.5 }); api.prop(fridge, 1.4, 0.9, -3.4); api.nav.addBox(1.4, -3.4, 0.9, 0.8);
+      api.prop(P.box(0.06, 0.5, 0.05, 0x8a8a90), 1.85, 1.0, -3.0);   // fridge handle
+      const stove = P.box(0.9, 0.8, 0.8, 0x3a3a40, { rough: 0.5 }); api.prop(stove, 4.4, 0.4, -3.4); api.nav.addBox(4.4, -3.4, 0.9, 0.8);
+      for (const bx of [-0.2, 0.2]) for (const bz of [-0.2, 0.2]) { const burner = P.box(0.18, 0.03, 0.18, 0x1a1a1e, { emissive: 0x2a0a04, emissiveIntensity: 0.4, edges: false }); api.prop(burner, 4.4 + bx, 0.82, -3.4 + bz); }
+      // a low coffee table completes the LIVING ROOM
+      api.prop(P.box(1.2, 0.35, 0.7, 0x4a3a30), -4.4, 0.18, 1.3); api.nav.addBox(-4.4, 1.3, 1.2, 0.7);
+
+      // ---- colored practical lights (plan §S0 richest diorama) ----
+      this._cakeLight = new THREE.PointLight(0xffd9a8, 3.2, 6, 1.5); this._cakeLight.position.set(5, 2.3, 3.2); api.group.add(this._cakeLight);
+      this._partyLights = [];
+      [[0xe98db0, -5, 3.6, 2], [0x8bafff, 4, 3.6, 3], [0x8bff9a, 0, 3.6, 0]].forEach(([c, x, y, z]) => {
+        const pl = new THREE.PointLight(c, 1.6, 7, 1.6); pl.position.set(x, y, z); api.group.add(pl);
+        const bulb = P.box(0.12, 0.12, 0.12, 0x14141a, { emissive: c, emissiveIntensity: 0.8, edges: false }); api.prop(bulb, x, y, z);
+        this._partyLights.push({ light: pl, base: 1.6 });
+      });
 
       // dumpster by the road (the trash target; makes the road familiar)
       api.world.canEmptyTrash = true;   // a full bag must be emptied here to keep cleaning
@@ -148,6 +171,13 @@ export default function makeScene() {
       // flicker the TV glow
       if (this._tv && this._tv.userData.tvGlow) this._tv.userData.tvGlow.material.emissiveIntensity = 0.5 + Math.sin(this._t * 7) * 0.15 + Math.sin(this._t * 3.3) * 0.1;
 
+      // music-reactive decorations: party lights pulse and balloons bob to a beat
+      if (!api.world.reducedMotion) {
+        const beat = 0.5 + 0.5 * Math.pow(Math.max(0, Math.sin(this._t * 3.4)), 2);
+        for (const p of this._partyLights) p.light.intensity = p.base * (0.55 + beat * 0.7);
+        for (const b of this._balloons) b.mesh.position.y = b.baseY + Math.sin(this._t * 1.6 + b.phase) * 0.08;
+      }
+
       // unwinnable spawn: 1.4x the clean throughput (§4 S0)
       this._spawnT += dt;
       const interval = CONFIG.PARTY.MESS_SPAWN / CONFIG.PARTY.CLEAN_EDGE;
@@ -172,10 +202,25 @@ export default function makeScene() {
       // scripted narrator pity
       if (this._t > 25 && !this._pityDone) { this._pityDone = true; api.narrator.say('s0_pity', { category: 'STORY' }); }
 
-      // nudges (never an arrow)
-      if (!this._named && this._t > CONFIG.PARTY.NAME_AT) { this._named = true; api.narrator.say('s0_name', { category: 'STORY' }); }
-      if (!this._wistful && this._t > CONFIG.PARTY.WISTFUL_AT) { this._wistful = true; api.narrator.say('s0_wistful', { category: 'STORY' }); }
-      if (!this._vacuum && this._t > CONFIG.PARTY.VACUUM_AT) {
+      // BEHAVIOR-TRIGGERED beats (plan §S0): the girl names him when Dust comes
+      // near her; futility (not a clock) invites the road.
+      const cleaned = this._cleaned || 0;
+      if (!this._named) {
+        const nearGirl = this._girl && api.world.dust.position.distanceTo(this._girl.position) < 2.2;
+        if (nearGirl || this._t > CONFIG.PARTY.NAME_AT) {
+          this._named = true;
+          if (this._girl) this._girl.rotation.y = Math.atan2(api.world.dust.position.x - this._girl.position.x, api.world.dust.position.z - this._girl.position.z);
+          api.narrator.say('s0_name', { category: 'STORY' });
+        }
+      }
+      // once the player has felt the futility, the road's light warms up
+      if (!this._roadInvite && (cleaned >= 8 || this._pityDone)) { this._roadInvite = true; }
+      if (this._roadInvite && !api.world.reducedMotion) {
+        this._streetLight.intensity += (2.6 - this._streetLight.intensity) * Math.min(1, dt * 0.4);
+        this._roadGlow.material.opacity = Math.min(0.32, this._roadGlow.material.opacity + dt * 0.03) * (0.7 + 0.3 * Math.sin(this._t * 1.2));
+      }
+      if (!this._wistful && (cleaned >= 12 || this._t > CONFIG.PARTY.WISTFUL_AT)) { this._wistful = true; api.narrator.say('s0_wistful', { category: 'STORY' }); }
+      if (!this._vacuum && (cleaned >= 18 || this._t > CONFIG.PARTY.VACUUM_AT)) {
         this._vacuum = true;
         // clear the messes for one beat — the vacuum of purpose
         for (const e of this._messes.slice()) { e.mesh.parent && e.mesh.parent.remove(e.mesh); api.interact.remove(e); }
@@ -189,6 +234,10 @@ export default function makeScene() {
         api.world.enabled = false;
         api.ui.setTask('—');
         api.audio.setRoomTone('silent');
+        // party-to-silence: the house lights fall behind, the road ahead stays lit
+        for (const p of this._partyLights) p.light.intensity = 0.2;
+        if (this._cakeLight) this._cakeLight.intensity = 0.4;
+        if (this._streetLight) this._streetLight.intensity = 3;
         api.narrator.reset();
         api.narrator.say('s0_exit', { category: 'STORY', onDone: () => api.solve() });
       }

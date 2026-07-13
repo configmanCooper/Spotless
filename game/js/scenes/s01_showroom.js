@@ -36,6 +36,9 @@ export default function makeScene() {
       this._spot = new THREE.SpotLight(0xffffff, 6, 16, Math.PI / 6, 0.4);
       this._spot.position.set(0, 8, -4); const tgt = new THREE.Object3D(); tgt.position.set(0, 0, -4);
       api.group.add(this._spot); api.group.add(tgt); this._spot.target = tgt;
+      // bright showroom up front, dark backstage — polished-display contrast
+      const fl1 = new THREE.PointLight(0xeaf4ff, 2.2, 15, 1.4); fl1.position.set(-4, 5, 3); api.group.add(fl1);
+      const fl2 = new THREE.PointLight(0xeaf4ff, 2.2, 15, 1.4); fl2.position.set(4, 5, 3); api.group.add(fl2);
       const spill = P.mess('spill', 0x9fb8c8); api.prop(spill, 0, 0.42, -3.0);  // near the front lip so it's reachable from the floor
       this._spill = api.clean({ id: 'demo_spill', mesh: spill, pos: spill.position, trashAmount: 0.05, reachClean: 2.0,
         onClean: (a) => { a.narrator.say('s1_repeat', { category: 'REACT' }); a.fakeTaskBeat(); setTimeout(() => { if (!a.solved) { const m = P.mess('spill', 0x9fb8c8); a.prop(m, 0, 0.42, -3.0); this._spill = a.clean({ id: 'demo_spill', mesh: m, pos: m.position, trashAmount: 0.05, reachClean: 2.0, onClean: this._spill.onClean }); } }, 900); } });
@@ -53,20 +56,34 @@ export default function makeScene() {
 
       // ---- display case with the C-Series mannequin + badge ----
       const caseMesh = P.box(1, 2, 1, 0x33414d, { emissive: 0x0a1015 }); api.prop(caseMesh, -6, 1, 4); api.nav.addBox(-6, 4, 1, 1);
-      api.prop(P.labelPlaque('EMPLOYEE OF\nTHE MONTH\nC-SERIES', 0.9, 0.6, { bg: '#33414d', fg: '#cde' }), -6, 1.9, 3.45);
+      api.mountSign(caseMesh, 'EMPLOYEE OF\nTHE MONTH\nC-SERIES', 0.8, 0.55, [0, 0.5, 0.52], { bg: '#33414d', fg: '#cde' });
       const mannequin = P.robot({ body: 0xcfd6c8 }).group; mannequin.scale.setScalar(0.7); api.prop(mannequin, -6, 1.0, 4);
       const badge = P.items.tag(0x7fd7ff); badge.visible = false; api.prop(badge, -6, 1.5, 3.6); this._badgeMesh = badge;
+
+      // showroom floor mannequins on glossy podiums — product silhouettes that make
+      // the room feel like a store, and darken the backstage by contrast
+      const podium = (x, z, hex, poseY) => {
+        const pod = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.8, 0.2, 16), P.mat(0xe8eef5, { rough: 0.25, metal: 0.2 })); api.prop(pod, x, 0.1, z); api.nav.addBox(x, z, 1.2, 1.2);
+        const mq = P.robot({ body: hex }).group; mq.scale.setScalar(0.62); mq.rotation.y = poseY; api.prop(mq, x, 0.2, z);
+        return mq;
+      };
+      podium(-3.2, 2.2, 0xd8d2c0, 0.5);
+      podium(3.2, 4.2, 0xc8d0d8, -0.6);
+      // moving demo signage above the stage — its text changes with the demo phase
+      this._marquee = P.labelPlaque('◆ LIVE DEMO ◆', 2.0, 0.4, { bg: '#0e1620', fg: '#7fd7ff', tilt: false });
+      api.prop(this._marquee, 0, 2.9, -2.4);
+      this._marqueeText = '';
 
       // ---- staff door + badge reader ----
       this._staffDoor = api.door(-7, -8, 2.2, 0.3, 0x33414d, 2.0);
       const reader = P.box(0.2, 0.3, 0.1, 0x2a2e36, { emissive: 0x101418 }); api.prop(reader, -5.7, 1.3, -7.7);
-      api.prop(P.labelPlaque('▮', 0.2, 0.2, { bg: '#2a2e36', fg: '#7fd7ff' }), -5.7, 1.7, -7.6);
+      api.mountSign(reader, '▮', 0.16, 0.16, [0, 0.35, 0.09], { bg: '#2a2e36', fg: '#7fd7ff' });
 
       // ---- backstage breaker + dispenser ----
       const panel = P.items.breakerPanel(0x4a5560); api.prop(panel, 6, 1.3, -10.7); this._panel = panel;
-      api.prop(P.labelPlaque('STAGE POWER', 0.9, 0.22, { bg: '#2a323c', fg: '#7fd7ff' }), 6, 2.0, -10.55);
+      api.mountSign(panel, 'STAGE POWER', 0.8, 0.2, [0, 0.7, 0.22], { bg: '#2a323c', fg: '#7fd7ff' });
       const disp = P.box(1.6, 1.8, 1.2, 0x3a4a58, { emissive: 0x101820 }); api.prop(disp, -7, 0.9, -10.5); api.nav.addBox(-7, -10.5, 1.6, 1.2);
-      api.prop(P.labelPlaque('MESS DISPENSER\nMK II', 1.4, 0.5), -7, 1.7, -9.85);
+      api.mountSign(disp, 'MESS DISPENSER\nMK II', 1.2, 0.45, [0, 0.5, 0.62]);
       const plug = P.items.plug(0xffd777); api.prop(plug, -6, 0.3, -10.1); this._plug = plug;
       const tubeMat = P.mat(0x7fd7ff, { rough: 0.6 });
       for (let i = 0; i < 6; i++) { const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1, 8), tubeMat); seg.rotation.z = Math.PI / 2; api.prop(seg, -i * 1.4, 0.06, -5.6); }
@@ -155,6 +172,15 @@ export default function makeScene() {
       this._cone.visible = !dim;
       this._cone.position.set(4 + Math.sin(ang) * 3, 0.03, 3 + Math.cos(ang) * 2);
       if (this._recLight) this._recLight.visible = !dim;
+
+      // moving demo signage: the marquee announces each phase of the loop
+      if (this._marquee) {
+        const txt = ['SPILL! WATCH THIS', 'NEW! CLEANS ANYTHING', '✦ APPLAUSE ✦', '— lights down —'][phase];
+        if (txt !== this._marqueeText) {
+          this._marqueeText = txt;
+          this._marquee.userData.label.draw(txt, { bg: dim ? '#0a0e14' : '#0e1620', fg: dim ? '#3a4650' : '#7fd7ff' });
+        }
+      }
     },
   };
 }

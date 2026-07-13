@@ -74,6 +74,21 @@ export function createApi(core, group, onSolve) {
       if (opts.fixture !== false) { const f = P.box(0.3, 0.16, 0.3, 0x1a1a1e, { emissive: opts.color ?? 0xfff2d8, emissiveIntensity: 0.5, edges: false }); f.position.set(x, y, z); group.add(f); }
       return l;
     },
+    // mount a framed sign flush on an existing fixture (plan §3 integrate signage):
+    // the sign becomes a child of `parent`, so it moves/reads as part of the object.
+    mountSign(parent, text, w, h, localPos, opts = {}) {
+      const s = P.labelPlaque(text, w, h, Object.assign({ tilt: false }, opts));
+      s.position.set(localPos[0], localPos[1], localPos[2]);
+      if (opts.rot) s.rotation.set(opts.rot[0] || 0, opts.rot[1] || 0, opts.rot[2] || 0);
+      parent.add(s);
+      return s;
+    },
+    // a freestanding wayfinding sign on a post rising from the floor
+    postSign(text, x, z, w = 1.0, h = 0.4, opts = {}) {
+      const g = P.postSign(text, w, h, opts);
+      api.prop(g, x, 0, z);
+      return g;
+    },
     setAnchors(a) { core.setAnchors && core.setAnchors(a); },
     setAmbient(v) { core.setAmbient && core.setAmbient(v); },
     credits() { core.onCredits && core.onCredits(); },
