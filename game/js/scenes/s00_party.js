@@ -57,12 +57,13 @@ export default function makeScene() {
       const tv = P.items.tv(0x14141a); api.prop(tv, -5.5, 0, -0.2); this._tv = tv; api.nav.addBox(-5.5, -0.2, 1.6, 0.4);
       const tvStand = P.box(1.6, 0.5, 0.4, 0x3a2f28); api.prop(tvStand, -5.5, 0.25, -0.2);
 
-      // kitchen counter + appliances (a clear KITCHEN identity, right of divider)
+      // kitchen counter + appliances (a clear KITCHEN identity, along the back-right
+      // wall — kept well clear of the doorway/road lane so Dust can always leave)
       api.prop(P.box(2.4, 0.7, 1.0, 0x6b5545), 3, 0.35, -3);
-      const fridge = P.box(0.9, 1.8, 0.8, 0xd8d8dc, { rough: 0.5 }); api.prop(fridge, 1.4, 0.9, -3.4); api.nav.addBox(1.4, -3.4, 0.9, 0.8);
-      api.prop(P.box(0.06, 0.5, 0.05, 0x8a8a90), 1.85, 1.0, -3.0);   // fridge handle
-      const stove = P.box(0.9, 0.8, 0.8, 0x3a3a40, { rough: 0.5 }); api.prop(stove, 4.4, 0.4, -3.4); api.nav.addBox(4.4, -3.4, 0.9, 0.8);
-      for (const bx of [-0.2, 0.2]) for (const bz of [-0.2, 0.2]) { const burner = P.box(0.18, 0.03, 0.18, 0x1a1a1e, { emissive: 0x2a0a04, emissiveIntensity: 0.4, edges: false }); api.prop(burner, 4.4 + bx, 0.82, -3.4 + bz); }
+      const fridge = P.box(0.9, 1.8, 0.8, 0xd8d8dc, { rough: 0.5 }); api.prop(fridge, 7.6, 0.9, -3.4); api.nav.addBox(7.6, -3.4, 0.9, 0.8);
+      api.prop(P.box(0.06, 0.5, 0.05, 0x8a8a90), 8.05, 1.0, -3.0);   // fridge handle
+      const stove = P.box(0.9, 0.8, 0.8, 0x3a3a40, { rough: 0.5 }); api.prop(stove, 6.2, 0.4, -3.4); api.nav.addBox(6.2, -3.4, 0.9, 0.8);
+      for (const bx of [-0.2, 0.2]) for (const bz of [-0.2, 0.2]) { const burner = P.box(0.18, 0.03, 0.18, 0x1a1a1e, { emissive: 0x2a0a04, emissiveIntensity: 0.4, edges: false }); api.prop(burner, 6.2 + bx, 0.82, -3.4 + bz); }
       // a low coffee table completes the LIVING ROOM
       api.prop(P.box(1.2, 0.35, 0.7, 0x4a3a30), -4.4, 0.18, 1.3); api.nav.addBox(-4.4, 1.3, 1.2, 0.7);
 
@@ -143,7 +144,12 @@ export default function makeScene() {
       const kinds = ['spill', 'cup', 'crumb'];
       const k = kinds[(Math.random() * kinds.length) | 0];
       const m = P.mess(k, k === 'spill' ? 0xb08a6a : k === 'cup' ? 0xd8d2c0 : 0xcaa06a);
-      const x = -7 + Math.random() * 14, z = -3.5 + Math.random() * 8;
+      // pick a spot the robot can actually reach (not inside/behind furniture)
+      let x = 0, z = 0;
+      for (let tries = 0; tries < 20; tries++) {
+        x = -7 + Math.random() * 14; z = -3.5 + Math.random() * 8;
+        if (!this._navBlocked(api, x, z)) break;
+      }
       api.prop(m, x, m.position.y, z);
       const e = api.clean({
         id: 'mess_' + Math.random().toString(36).slice(2, 6), mesh: m,
@@ -155,6 +161,12 @@ export default function makeScene() {
         },
       });
       this._messes.push(e);
+    },
+
+    _navBlocked(api, x, z) {
+      const r = 0.5;
+      for (const o of api.nav.obstacles) if (x + r > o.minX && x - r < o.maxX && z + r > o.minZ && z - r < o.maxZ) return true;
+      return false;
     },
 
     update(dt, api) {
