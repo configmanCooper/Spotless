@@ -1,11 +1,21 @@
 # SPOTLESS — Current Master Improvement Plan
 
 **Date:** 2026-07-13  
-**Status:** Active master plan for the current post-improvement codebase  
+**Status:** Implemented through Phase 5; cold playtesting remains ongoing
 **Repository baseline:** `1545d67`  
 **Supersedes for future work:** `COMPREHENSIVE_IMPROVEMENT_PLAN.md`  
 **Historical design references:** `OPUS_MASTER_PLAN.md`,
 `PUZZLE_DEPTH_PLAN.md`, and `COMPREHENSIVE_IMPROVEMENT_PLAN.md`
+
+## Implementation record
+
+- Phase 0 correctness and lifecycle: `50b27ea`
+- Phase 1 input and accessibility: `b610531`
+- Phase 2 puzzle feedback and finale pacing: `91b017d`
+- Phase 3 presentation systems: `3f95884`
+- Phase 4 scene refinement: `2b6533c`
+- Phase 5 release completion: this document, release docs, budget tests, and
+  final validation
 
 ---
 

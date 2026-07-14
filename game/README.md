@@ -1,80 +1,143 @@
 # SPOTLESS
 
-A ~4-hour, single-player, narrator-driven **puzzle game** about a house robot named
-**Dust**. Twelve scenes across one night in a small coastal town; every scene has a
-stated task that is always completable and always *wrong*, and a hidden real solution.
-The narrator — **Ash** — follows the whole way. The full design is in
-`../development/OPUS_MASTER_PLAN.md`.
+A single-player, narrator-driven puzzle game about a house robot named
+**Dust**. Twelve scenes unfold across one night in a small coastal town. Each
+scene gives Dust an assignment; meaningful progress requires understanding
+what the assignment ignores.
 
-HTML5 + three.js, 3D world, 2D DOM UI. No build step, no bundler, no network.
+The active implementation roadmap is
+`../development/MASTER_IMPROVEMENT_PLAN.md`. The original story and puzzle
+designs remain in `OPUS_MASTER_PLAN.md` and `PUZZLE_DEPTH_PLAN.md`.
+
+HTML5 + three.js, 3D procedural low-poly world, and 2D DOM UI. No build step,
+bundler, CDN, account, analytics service, or required network connection.
 
 ## Run
 
-```
-npm start          # static server → http://localhost:8131
+```powershell
+npm install
+npm start
 ```
 
-Open `index.html` (served) in a modern browser. three.js is vendored in
-`js/vendor/`; the browser resolves the bare `three` import via the `<script
-type="importmap">` in `index.html`.
+Open `http://localhost:8131`. Three.js and the required postprocessing modules
+are vendored under `js/vendor/`.
 
 ## Controls
 
-- **Move** — WASD / arrow keys / click-or-tap to move
-- **Interact / Clean** — E, Space, or F (hold to clean; tap to use / talk / pick / place)
-- **Drop** — Q or G (drops the one item you're carrying; picking up a new item auto-drops)
-- **Self-action** — R (context actions on Dust himself, e.g. peel your barcode, climb the cradle)
-- **Lamp** — L (a headlamp you discover you had all along; it drains in dark scenes)
-- **Pause** — Esc
+### Keyboard and mouse
 
-You carry one item at a time (shown in Dust's hands). No inventory UI. Nothing can
-kill you, no timer fails you, and every puzzle state is recoverable in-fiction.
+- **Move:** WASD, arrow keys, or click to move.
+- **Interact / Examine / Clean:** E, Space, or F. Tap to use; hold to clean.
+- **Drop:** Q or G.
+- **Self-action:** R when a contextual action appears on Dust.
+- **Lamp:** L once Dust discovers it.
+- **Pause:** Escape.
+
+A click near an interactable walks Dust into range and performs the action on
+arrival.
+
+### Touch
+
+Tap the ground to move. Contextual on-screen controls provide Interact, Drop,
+Self-action, Lamp, and Pause. Hold the Interact control to clean.
+
+### Gamepad
+
+- Left stick: move.
+- A: interact / clean.
+- B: drop.
+- X: self-action.
+- Y: lamp.
+- Start: pause / resume.
+
+## Player-facing systems
+
+- One visible carried item; no inventory menu.
+- No deaths or destructive fail states.
+- Recoverable puzzle state and adversarial anti-soft-lock tests.
+- Examine close-ups for physical clues.
+- Three-tier hints, Patient Narrator mode, Assist timing, and mercy shimmer.
+- Memory transcript in the pause menu.
+- Subtitle size, speed, background, and high-contrast options.
+- Reduced motion.
+- Master volume.
+- Optional light bloom, off by default for performance.
+- Bounded checkpoints for the scrapyard, repair shop, and lighthouse.
+- Scene Select after completing the game.
 
 ## Puzzles
 
-Every scene after the party (S1→S11) is a gated multi-step chain that escalates —
-from ~6 steps in the showroom to the ~35-step, six-chamber lighthouse finale. The
-design contract lives in `../development/PUZZLE_DEPTH_PLAN.md` (which supersedes the
-scene solutions in `OPUS_MASTER_PLAN.md`). Difficulty comes from discovery and
-synthesis, never obscurity: every code/answer is readable in two places, every decoy
-responds, timing windows are generous, and late puzzles recombine mechanics you've
-already used.
+The puzzle curve grows from a six-step showroom chain to a six-chamber
+lighthouse finale with roughly twenty-one gated steps and several
+player-controlled narrative beats. Late puzzles recombine familiar mechanics
+rather than adding arbitrary controls.
+
+Difficulty comes from discovery and synthesis:
+
+- Codes and ordered answers have redundant evidence.
+- Wrong actions respond instead of silently failing.
+- Timing windows are generous and widened by Assist.
+- Critical clues never depend on color alone.
+- No scene requires a pixel hunt.
+
+## Audio strategy
+
+The release baseline is **subtitle-first**. All story content is complete and
+playable without voice files.
+
+Optional VO files can be placed at `audio/vo/<line-id>.mp3`, where line IDs
+match `js/narrator_script.json`. Missing files fall back to subtitles. Ash's
+lighthouse reveal supports real HRTF spatial routing when VO is present.
 
 ## Tests
 
+```powershell
+npm test                 # 12 scene solvers + dumb actions + solve-after-dumb
+npm run test:core        # narrator, material cache, chain validation/telemetry
+npm run test:checkpoints # S8/S9/S11 checkpoint reconstruction
+npm run test:checkpoints-browser # rendered S8/S9 reload + technician sequence
+npm run test:nav         # navigation reachability audit
+npm run test:replay      # heard-once replay safety
+npm run test:scenes      # all scenes build and render
+npm run test:budgets     # draw/triangle/resource budgets + teardown memory
+npm run test:lifecycle   # settings, input, transitions, finale ordering
+npm run smoke            # real-browser boot and S0→S1 transition
+npm run test:all         # complete suite
 ```
-npm test           # headless solver + dumb bots (§10): every scene is solvable and
-                   # never soft-locks, even under the ten dumbest actions
-npm run smoke      # real-browser boot check via playwright-core (chromium)
-```
 
-`npm test` uses a small Node loader (`test/loader.mjs`) to map `three` to the vendored
-file, and browser-global shims (`test/shim.js`) so the DOM-free game logic runs in Node.
+Browser tests use repository-local `playwright-core` and an installed Chrome,
+Edge, or configured `CHROME_EXE`.
 
-`?playtest=1` on the URL shows a local-only debug panel with per-scene solve times and
-hints consumed (for the §10 playtest protocol). No telemetry ever leaves the machine.
+## Playtesting
 
-## Layout (§9)
+Open `?playtest=1` to show the local telemetry panel. It reports solve time,
+wrong attempts, drops, examines, reloads, and render budgets. Click the panel
+to export JSON. No telemetry leaves the machine automatically.
 
-```
-index.html              import map + canvas + ui-root
-server.cjs              tiny static server
+The cold-test process and ship gates are in
+`../development/PLAYTEST_PROTOCOL.md`.
+
+## Layout
+
+```text
+index.html              import map + canvas + UI root
+server.cjs              local no-cache static server
 js/
-  main.js               boot, state machine, fixed-timestep loop
-  config.js             all tuning + per-scene palettes
-  engine/               renderer, cameraRig (fixed overhead ~55°), props (prop kit)
-  nav.js                circle-vs-box movement + slide
-  interact.js           verb registry
-  world.js              the Dust actor: move, clean, carry, lamp, chest screen
-  input.js              keyboard + pointer (three input styles)
-  narrator.js           priority-interrupt queue, clause-boundary swaps (§5)
-  hints.js              the 4'/8'/12' hint ladder (§6)
-  ui.js                 subtitles, HUD, menus, settings, credits
-  save.js audio.js debug.js
-  narrator_script.json  all authored lines (subtitle-first; VO is 404-tolerant)
-  scenes/               s00_party … s11_lighthouse + kit.js + index.js
+  main.js               boot, lifecycle, transitions, checkpoints
+  config.js             tuning, palettes, and scene light rigs
+  engine/
+    renderer.js         ACES/sRGB renderer + optional bloom
+    cameraRig.js        fixed authored camera anchors and beats
+    props.js            procedural low-poly prop library
+    fx.js               motes, puffs, smoke, sparks, and beams
+  input.js              keyboard, pointer, touch, and gamepad
+  world.js              Dust movement, carry, cleaning, lamp, animation
+  interact.js           contextual entity registry
+  narrator.js           priority queue, sequences, Memory transcript
+  hints.js              per-step hint ladder and telemetry
+  ui.js                 HUD, menus, accessibility, Examine, credits
+  save.js               versioned local save and bounded checkpoints
+  audio.js              VO fallback, spatial audio, SFX, room tones
+  scenes/               s00_party through s11_lighthouse
+test/                   headless and real-browser regression suites
 ```
-
-VO audio is optional: drop `audio/vo/<id>.mp3` files (ids match
-`narrator_script.json`) and they play automatically; missing files fall back to
-subtitles silently, so voice can land in batches.

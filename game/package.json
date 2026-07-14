@@ -1,6 +1,6 @@
 {
   "name": "spotless",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "private": true,
   "description": "SPOTLESS — a narrator-driven puzzle game about a house robot named Dust.",
   "type": "module",
@@ -9,12 +9,14 @@
     "test": "node --no-warnings --loader ./test/loader.mjs test/run.js",
     "test:core": "node --no-warnings --loader ./test/loader.mjs test/core-regressions.mjs",
     "test:checkpoints": "node --no-warnings --loader ./test/loader.mjs test/checkpoints.mjs",
+    "test:checkpoints-browser": "node test/checkpoints-browser.cjs",
     "test:nav": "node --no-warnings --loader ./test/loader.mjs test/navreach.mjs",
     "test:replay": "node test/replay.cjs",
     "test:scenes": "node test/scenesweep.cjs",
+    "test:budgets": "node test/budgets.cjs",
     "test:lifecycle": "node test/lifecycle.cjs",
     "smoke": "node test/smoke.cjs",
-    "test:all": "npm test && npm run test:core && npm run test:checkpoints && npm run test:nav && npm run test:replay && npm run test:scenes && npm run test:lifecycle && npm run smoke"
+    "test:all": "npm test && npm run test:core && npm run test:checkpoints && npm run test:checkpoints-browser && npm run test:nav && npm run test:replay && npm run test:scenes && npm run test:budgets && npm run test:lifecycle && npm run smoke"
   },
   "devDependencies": {
     "playwright-core": "1.61.1",

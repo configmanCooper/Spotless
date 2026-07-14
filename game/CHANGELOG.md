@@ -1,38 +1,68 @@
 # SPOTLESS — Changelog
 
-## v2 — Puzzle Depth Pass (PUZZLE_DEPTH_PLAN.md)
-Engine
-- Added `api.chain(defs)` step machine (gated entities, per-step hint-pool swaps, step beats).
-- Rewrote `hints.js` for per-step hint pools + `CONFIG.HINT_SCALE` per-scene timer stretch;
-  the mercy shimmer now fires on the current step's clue object (was a no-op).
-- Added `api.dial()` (in-world code wheels), `api.patroller()` (timed movers with
-  isNear/isAway/paused), `api.memory` (cross-scene flags via save), `api.setSelfAction()`
-  (R-key actions on Dust), and lamp battery drain/recharge (S10/S11).
-- New keys: Q/G drop carried item (+ auto-swap on pickup), R self-action.
+## v3 — Master Improvement Pass
 
-Scenes (S0 party and S4 yard unchanged, by design)
-- S1 Showroom → 6-step chain (camera-window key, badge, breaker, dispenser).
-- S2 Office → 9-step (shred-bin fragments, tape mend, hidden key, stamp, chute router).
-- S3 Smart Home → 10-step (obey-the-routine closet, metronome/battery swap, birthday dial code).
-- S5 Museum → 11-step (guard patrol + alarm dial, ordered HAND→RIBBON→FUSE install, freight lift).
-- S6 Care Home → moderate chain (glasses off the nurse cart, two-object photo match; stays gentle).
-- S7 Theater → 9-step (snore-timed key, page halves, fly-rope plot, catwalk bulb, board preset).
-- S8 Scrapyard → multi-step (E-stop + generator, crane grid, LOTO tag, heap dig, pickup-bell window).
-- S9 Repair → 14-step identity heist (grind chip, peel your barcode, ballast, sign fuse, paperwork,
-  turnstile no longer knows you → ship yourself out; sets cross-scene `gaveBarcode`).
-- S10 Blackout → 8-step resource route (lamp drain + recharge, mailbox keys, kept hex crank, bridge winch).
-- S11 Lighthouse → six-chamber master puzzle (~22 gated steps) echoing every earlier scene; the
-  igniter cradle is shaped like you; spatial reveal → Ash → speck choice → beam credits.
+### Correctness and lifecycle
 
-Fixes
-- Scene advance now waits for the solve dialog to finish before transitioning (read buffer).
-- `once` narrator lines fire their onDone even when suppressed (no replay soft-lock).
-- New Game clears heard lines; dev server sends no-cache headers.
-- S1 demo spill sits on the stage surface (was buried inside it).
+- Preserved FIFO order for equal-priority narrator lines.
+- Added cancellable authored narration sequences.
+- Rebuilt the S11 reveal as an ordered, player-paced spatial sequence.
+- Fixed interludes continuing gameplay beneath the fade and advancing twice.
+- Fixed pointer input remaining disabled after transitions or quitting to title.
+- Cleared stale carried items safely between scenes.
+- Reset transcript, timing history, checkpoints, and spatial narrator state on
+  New Game.
+- Fixed material-cache collisions involving metalness and emissive intensity.
+- Made checkpoint restoration tolerant of stale step names.
 
-Tests
-- `test/run.js`: solver + dumb + solveAfterDumb bots rewritten per scene (36 checks, all green).
-- `test/scenesweep.cjs`, `smoke.cjs`, `replay.cjs`: browser build/boot/replay checks.
+### Input and accessibility
 
-## v1 — Initial build
-- Full 12-scene narrator-driven puzzle game (engine, narrator queue, hint ladder, saves, 12 scenes).
+- Added complete touch controls and queued interact-on-arrival movement.
+- Added gamepad movement and action controls.
+- Hardened keyboard handling against repeats, blur, and stuck movement.
+- Wired the subtitle toggle and master volume.
+- Expanded Assist across timed scenes.
+- Added reduced-motion credit controls and pause/skip support.
+- Improved Memory with speaker and scene labels.
+- Added optional full-resolution bloom, off by default.
+
+### Puzzles and narrative
+
+- Added strict chain-definition validation and per-step telemetry.
+- Expanded action-sensitive nudges and Examine clues.
+- Added an optional playable sorting assignment in the scrapyard.
+- Added redundant numbered/symbol theater rope markings.
+- Added a live scrapyard crane silhouette and clearer industrial feedback.
+- Added a porchman callback after Dust proves he can navigate the blackout.
+- Gave both final choices distinct but equally warm beam acknowledgments.
+
+### Graphics and audio
+
+- Added shared NPC idle motion and heavy-item carry posture.
+- Added selective static contact shadows and framed diorama floors.
+- Added smart-home screen scanlines and low-battery chest-screen pulses.
+- Added a layered lighthouse beam and complete tower flooring.
+- Added distinct procedural room-tone presets for every environment.
+- Tightened scene footprints and improved the party exterior, theater,
+  scrapyard, blackout road, and lighthouse compositions.
+
+### Testing and tooling
+
+- Removed machine-specific Playwright imports.
+- Added narrator/material/chain regression tests.
+- Added lifecycle, settings, input, Assist, carry, and finale tests.
+- Added navigation and checkpoint audits.
+- Added local detailed telemetry and JSON export.
+- Added automated render budgets and teardown-memory checks.
+
+## v2 — Puzzle Depth Pass
+
+- Added the chain step machine, dials, patrollers, cross-scene memory,
+  self-actions, per-step hints, lamp resource system, and the multi-step scene
+  redesigns.
+- Added solver, dumb-action, replay, scene-sweep, and browser smoke tests.
+
+## v1 — Initial Build
+
+- Built the complete twelve-scene narrator-driven game, save system, hint
+  ladder, procedural 3D world, UI, and ending.
