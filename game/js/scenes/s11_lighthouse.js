@@ -26,6 +26,7 @@ export default function makeScene() {
       api.fx.motes({ count: 90, area: [10, 44, 10], center: [0, 6, 20], color: 0xffe3a8, opacity: 0.16, size: 0.05 });
       api.setAmbient(0.5);
       api.world.lampDrains = true; api.world.lampBattery = 1; api.world.setLampKnown(true); api.ui.setLampGlyph('known');
+      api.world.lampDrainScale = api.assist ? 1.5 : 1;
 
       // brass plaque at the entry
       api.prop(P.labelPlaque('LIGHT =\nFIRE + GLASS + TURN', 1.6, 0.7, { bg: '#3a2f14', fg: '#ffd777' }), 0, 1.4, -4.5);
@@ -238,6 +239,7 @@ export default function makeScene() {
     },
 
     update(dt, api) {
+      api.world.lampDrainScale = api.assist ? 1.5 : 1;
       // persistent FIRE/GLASS/TURN diagram (GLASS=lens loft, TURN=gear deck, FIRE=igniter)
       if (this._diagram) {
         const state = { GLASS: this._ch.done('c3_p3'), TURN: this._ch.done('c4_gear'), FIRE: this._ch.done('c5_cradle') };

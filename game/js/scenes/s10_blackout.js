@@ -27,6 +27,8 @@ export default function makeScene() {
       api.bounds(-7, 7, -40, 6);
       api.setAmbient(0.22);
       api.world.lampDrains = true; api.world.lampBattery = 1;
+      api.world.lampDrainScale = api.assist ? 1.5 : 1;
+      api.world.darkMoveScale = api.assist ? 0.75 : 0.55;
 
       // roadside houses — varied silhouettes (pitched roofs, heights, the odd lit
       // window) so the dark reads as a street with landmarks, not a tunnel of boxes
@@ -134,6 +136,8 @@ export default function makeScene() {
 
     update(dt, api) {
       if (api.solved) return;
+      api.world.lampDrainScale = api.assist ? 1.5 : 1;
+      api.world.darkMoveScale = api.assist ? 0.75 : 0.55;
       // the distant lighthouse beacon breathes faintly (ambient landmark)
       if (this._lhGlow && !api.world.reducedMotion) { this._t = (this._t || 0) + dt; this._lhGlow.material.opacity = 0.3 + Math.sin(this._t * 1.5) * 0.1; }
       if (api.world.lampOn && !this._lampLit) { this._lampLit = true; api.ui.setLampGlyph('on'); this._ch.advance('lamp'); }

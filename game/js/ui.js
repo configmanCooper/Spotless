@@ -25,6 +25,13 @@ export class UI {
       </svg>
       <div id="subs"><span class="who"></span><span class="txt"></span></div>
       <div id="toast"></div>
+      <div id="touch-controls">
+        <button id="touch-interact" aria-label="Interact">E</button>
+        <button id="touch-drop" aria-label="Drop carried item">DROP</button>
+        <button id="touch-self" aria-label="Self action">SELF</button>
+        <button id="touch-lamp" aria-label="Toggle lamp">LAMP</button>
+        <button id="touch-pause" aria-label="Pause">II</button>
+      </div>
       <div id="fade"></div>
       <div id="debug"></div>
       <div id="title" class="screen"></div>
@@ -44,7 +51,9 @@ export class UI {
     this.debugEl = this.$('#debug');
     this.titleEl = this.$('#title'); this.pauseEl = this.$('#pause'); this.creditsEl = this.$('#credits');
     this.examineEl = this.$('#examine');
+    this.touchEl = this.$('#touch-controls');
     this._v = new THREE.Vector3();
+    this._bindTouchControls();
     this.setHudVisible(false);
   }
 
@@ -52,6 +61,10 @@ export class UI {
 
   // ---- subtitles ----
   showSub(text, cls = 'narrator', who = '') {
+    if (this.game && this.game.settings && this.game.settings.subs === false) {
+      this.hideSub();
+      return;
+    }
     // preserve accessibility (sub-*) classes; only swap the speaker class + show
     if (this._lastSubCls) this.subs.classList.remove(this._lastSubCls);
     this.subs.classList.add('show', cls);
@@ -95,6 +108,27 @@ export class UI {
   }
   setLampGlyph(state) { // 'dim' | 'known' | 'on'
     this.lampGlyph.className = 'lamp-glyph' + (state === 'on' ? ' on' : state === 'known' ? ' known' : '');
+  }
+  _bindTouchControls() {
+    const bindHold = (el) => {
+      const down = (e) => { e.preventDefault(); e.stopPropagation(); this.game.input && this.game.input.setVirtualInteract(true); };
+      const up = (e) => { e.preventDefault(); e.stopPropagation(); this.game.input && this.game.input.setVirtualInteract(false); };
+      el.addEventListener('pointerdown', down);
+      el.addEventListener('pointerup', up);
+      el.addEventListener('pointercancel', up);
+      el.addEventListener('pointerleave', up);
+    };
+    bindHold(this.$('#touch-interact'));
+    this.$('#touch-drop').onclick = (e) => { e.preventDefault(); this.game.input && this.game.input.onDrop && this.game.input.onDrop(); };
+    this.$('#touch-self').onclick = (e) => { e.preventDefault(); this.game.input && this.game.input.onSelf && this.game.input.onSelf(); };
+    this.$('#touch-lamp').onclick = (e) => { e.preventDefault(); this.game.input && this.game.input.onLamp && this.game.input.onLamp(); };
+    this.$('#touch-pause').onclick = (e) => { e.preventDefault(); this.game.input && this.game.input.onPause && this.game.input.onPause(); };
+  }
+  setTouchActions({ play = false, carry = false, self = false, lamp = false } = {}) {
+    this.touchEl.classList.toggle('play', !!play);
+    this.$('#touch-drop').classList.toggle('available', !!carry);
+    this.$('#touch-self').classList.toggle('available', !!self);
+    this.$('#touch-lamp').classList.toggle('available', !!lamp);
   }
 
   setPrompt(text, mode = 'tap') {
@@ -148,14 +182,26 @@ export class UI {
 
   showSettings(settings, onChange, onBack) {
     this.pauseEl.classList.remove('hidden');
-    const seg = (key, opts, cur) => `<div class="seg">${opts.map(o =>
-      `<button data-k="${key}" data-v="${o}" class="${o === cur ? 'sel' : ''}">${o}</button>`).join('')}</div>`;
+    const seg = (key, opts, cur) => `<div class="seg">${opts.map(raw => {
+      const o = typeof raw === 'object' ? raw : { value: raw, label: raw };
+      return `<button data-k="${key}" data-v="${o.value}" class="${String(o.value) === String(cur) ? 'sel' : ''}">${o.label}</button>`;
+    }).join('')}</div>`;
     this.pauseEl.innerHTML = `
       <div class="settings">
         <h3>SETTINGS</h3>
-        <div class="opt"><span>Hints</span>${seg('hints', ['normal', 'patient', 'off'], settings.hints)}</div>
+        <div class="opt"><span>Hints</span>${seg('hints', [
+          { value: 'normal', label: 'Normal' },
+          { value: 'patient', label: 'Patient narrator' },
+          { value: 'off', label: 'Off' },
+        ], settings.hints)}</div>
+        <div class="setting-note">Patient narrator gives only the first two hint tiers and never highlights the answer.</div>
         <div class="opt"><span>Assist timing</span>${seg('assist', ['on', 'off'], settings.assist ? 'on' : 'off')}</div>
         <div class="opt"><span>Subtitles</span>${seg('subs', ['on', 'off'], settings.subs ? 'on' : 'off')}</div>
+        <div class="opt"><span>Master volume</span>${seg('master', [
+          { value: '0', label: 'Mute' }, { value: '0.25', label: '25%' },
+          { value: '0.5', label: '50%' }, { value: '0.75', label: '75%' },
+          { value: '0.9', label: '90%' }, { value: '1', label: '100%' },
+        ], settings.master ?? 0.9)}</div>
         <div class="opt"><span>Subtitle size</span>${seg('subSize', ['small', 'normal', 'large'], settings.subSize || 'normal')}</div>
         <div class="opt"><span>Reading speed</span>${seg('subSpeed', ['slow', 'normal', 'fast'], settings.subSpeed || 'normal')}</div>
         <div class="opt"><span>Subtitle background</span>${seg('subOpacity', ['low', 'normal', 'high'], settings.subOpacity || 'normal')}</div>
@@ -169,6 +215,7 @@ export class UI {
       if (k === 'subContrast') v = (v === 'on');
       if (k === 'assist') v = (v === 'on');
       if (k === 'reducedMotion') v = (v === 'on');
+      if (k === 'master') v = Number(v);
       onChange(k, v);
       b.parentElement.querySelectorAll('button').forEach(x => x.classList.remove('sel'));
       b.classList.add('sel');
@@ -215,8 +262,10 @@ export class UI {
     this.pauseEl.classList.remove('hidden');
     const items = (entries && entries.length)
       ? entries.slice().reverse().map(e => {
-          const who = e.speaker === 'voice' ? 'voice' : (e.speaker === 'spatial' ? 'ash' : 'ash');
-          return `<div class="mem-line ${who}"><span class="mem-txt">${this._esc(e.text)}</span></div>`;
+          const speaker = e.speaker === 'narrator' || e.speaker === 'spatial' ? 'ASH' : String(e.speaker || 'VOICE').toUpperCase();
+          const who = speaker === 'ASH' ? 'ash' : 'voice';
+          const scene = e.scene ? `<span class="mem-scene">${this._esc(e.scene.replace(/^s\d+_/, '').replace(/_/g, ' '))}</span>` : '';
+          return `<div class="mem-line ${who}"><div class="mem-meta"><span class="mem-who">${this._esc(speaker)}</span>${scene}</div><span class="mem-txt">${this._esc(e.text)}</span></div>`;
         }).join('')
       : '<div class="mem-empty">Nothing kept yet. The words come later.</div>';
     this.pauseEl.innerHTML = `
@@ -283,14 +332,37 @@ export class UI {
       `<div class="${l.dim ? 'dim' : ''}">${l.t || '&nbsp;'}</div>`).join('');
     this.creditsEl.innerHTML = '';
     this.creditsEl.appendChild(roll);
+    const controls = document.createElement('div');
+    controls.className = 'credit-controls';
+    this.creditsEl.appendChild(controls);
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      this.creditsEl.classList.remove('show', 'static');
+      onEnd && onEnd();
+    };
+    if (this.game.settings && this.game.settings.reducedMotion) {
+      this.creditsEl.classList.add('static');
+      controls.innerHTML = '<button class="btn primary" id="credits-continue">Continue</button>';
+      controls.querySelector('#credits-continue').onclick = finish;
+      return;
+    }
     roll.style.top = window.innerHeight + 'px';
-    const start = performance.now();
     const dur = 34000;
-    const anim = () => {
-      const k = (performance.now() - start) / dur;
+    let elapsed = 0, last = performance.now(), paused = false;
+    controls.innerHTML = '<button class="btn" id="credits-pause">Pause</button><button class="btn" id="credits-skip">Skip</button>';
+    const pauseBtn = controls.querySelector('#credits-pause');
+    pauseBtn.onclick = () => { paused = !paused; pauseBtn.textContent = paused ? 'Continue' : 'Pause'; };
+    controls.querySelector('#credits-skip').onclick = finish;
+    const anim = (now) => {
+      if (done) return;
+      if (!paused) elapsed += now - last;
+      last = now;
+      const k = elapsed / dur;
       roll.style.top = (window.innerHeight - k * (window.innerHeight + roll.offsetHeight + 200)) + 'px';
       if (k < 1) requestAnimationFrame(anim);
-      else { this.creditsEl.classList.remove('show'); onEnd && onEnd(); }
+      else finish();
     };
     requestAnimationFrame(anim);
   }

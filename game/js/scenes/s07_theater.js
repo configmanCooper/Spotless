@@ -25,6 +25,7 @@ export default function makeScene() {
 
     build(api) {
       this._t = 0; this.hasA = false; this.hasB = false; this.spotOn = false; this.battenUp = false;
+      this._api = api;
       api.floor(40, 0x171015);
       api.bounds(-11, 11, -9, 9);
       api.wall(0, -9, 24, 0.3, 0x241820); api.wall(-11, 0, 0.3, 18, 0x241820); api.wall(11, 0, 0.3, 18, 0x241820);
@@ -138,7 +139,8 @@ export default function makeScene() {
       this._barkT = 0;
     },
 
-    _snoring() { return (this._t % SNORE) < 3; },
+    _snoreWindow() { return this._api && this._api.assist ? 4.5 : 3; },
+    _snoring() { return (this._t % SNORE) < this._snoreWindow(); },
 
     update(dt, api) {
       if (api.solved) return;

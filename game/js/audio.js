@@ -16,7 +16,12 @@ export class Audio {
     try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch { this.ctx = null; }
   }
   resume() { this.ensure(); this.ctx && this.ctx.state === 'suspended' && this.ctx.resume(); }
-  setMaster(v) { this.master = v; }
+  setMaster(v) {
+    this.master = Math.max(0, Math.min(1, Number(v)));
+    for (const el of this.playing.values()) el.volume = el._spatial ? 1 : this.master;
+    if (this.spatialNode) this.spatialNode.gain.gain.value = this.master;
+    if (this.roomTone) this.roomTone.g.gain.value = this.roomTone.baseGain * this.master;
+  }
 
   // --- spatialized narrator (S11 reveal): route VO through a PannerNode so the
   // voice appears to come from the old robot at the lamp, not from everywhere. ---
@@ -56,7 +61,12 @@ export class Audio {
   clearSpatial() {
     for (const el of this.voCache.values()) {
       if (!el || !el._srcNode) continue;
-      try { el._srcNode.disconnect(); el._srcNode.connect(this.ctx.destination); } catch {}
+      try {
+        el._srcNode.disconnect();
+        el._srcNode.connect(this.ctx.destination);
+        el._spatial = false;
+        el.volume = this.master;
+      } catch {}
     }
     if (this.spatialNode) {
       try { this.spatialNode.panner.disconnect(); } catch {}
@@ -85,8 +95,11 @@ export class Audio {
         } else if (this.ctx && el._srcNode) {
            try { el._srcNode.disconnect(); el._srcNode.connect(this.spatialNode.panner); el.volume = 1; } catch {}
         }
+        el._spatial = true;
       } else if (this.ctx && el._srcNode) {
-        try { el._srcNode.disconnect(); el._srcNode.connect(this.ctx.destination); } catch {}
+        try { el._srcNode.disconnect(); el._srcNode.connect(this.ctx.destination); el._spatial = false; el.volume = this.master; } catch {}
+      } else {
+        el._spatial = false;
       }
       const p = el.play();
       p && p.catch(() => {});
@@ -98,7 +111,7 @@ export class Audio {
 
   // --- SFX (synthesized, no assets needed) ---
   sfx(name) {
-    if (!this.enabled) return;
+    if (!this.enabled || this.master <= 0) return;
     this.ensure(); if (!this.ctx) return;
     const t = this.ctx.currentTime;
     const o = this.ctx.createOscillator(), g = this.ctx.createGain();
@@ -128,9 +141,10 @@ export class Audio {
     const src = this.ctx.createBufferSource(); src.buffer = buf; src.loop = true;
     const filt = this.ctx.createBiquadFilter(); filt.type = 'lowpass';
     filt.frequency.value = kind === 'party' ? 700 : 300;
-    const g = this.ctx.createGain(); g.gain.value = (kind === 'party' ? 0.05 : 0.02) * this.master;
+    const baseGain = kind === 'party' ? 0.05 : 0.02;
+    const g = this.ctx.createGain(); g.gain.value = baseGain * this.master;
     src.connect(filt).connect(g).connect(this.ctx.destination);
     src.start();
-    this.roomTone = { src, g };
+    this.roomTone = { src, g, baseGain };
   }
 }

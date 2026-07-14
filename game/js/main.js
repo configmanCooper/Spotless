@@ -33,6 +33,7 @@ class Game {
     this.save = (await import('./save.js'));
     this.state = this.save.load();
     this.settings = this.state.settings;
+    this.audio.setMaster(this.settings.master ?? 0.9);
 
     let script = {};
     try { script = await (await fetch('js/narrator_script.json')).json(); } catch {}
@@ -83,6 +84,8 @@ class Game {
   _setSetting(k, v) {
     this.settings[k] = v; this.save.save(this.state);
     if (k.startsWith('sub')) this.ui.applySubtitleSettings(this.settings);
+    if (k === 'subs' && !v) this.ui.hideSub();
+    if (k === 'master') this.audio.setMaster(v);
     if (k === 'reducedMotion') { this.world.reducedMotion = !!v; document.documentElement.classList.toggle('reduced-motion', !!v); }
   }
 
@@ -261,6 +264,7 @@ class Game {
     const next = SCENES[idx + 1];
     if (!next) { return; } // finale handles credits itself
     this.mode = 'interlude';
+    this.input.reset();
     this.input.enabled = false;
     this.world.enabled = false;
     this.ui.fade(true);
@@ -316,7 +320,7 @@ class Game {
 
   _togglePause() {
     if (this.mode === 'examine') { this.ui.hideExamine(); this.mode = 'play'; this.input.enabled = true; return; }
-    if (this.mode === 'play') { this.mode = 'paused'; this.input.enabled = false; this._openPause(); }
+    if (this.mode === 'play') { this.mode = 'paused'; this.input.reset(); this.input.enabled = false; this._openPause(); }
     else if (this.mode === 'paused') { this.mode = 'play'; this.input.enabled = true; this.ui.hidePause(); }
   }
   _resumeFromPause() { this.mode = 'play'; this.input.enabled = true; }
@@ -330,6 +334,7 @@ class Game {
   }
   _quitToTitle() {
     this.ui.hidePause();
+    this.input.reset();
     this.input.enabled = true;
     this.world.enabled = false;
     this.narrator.reset();
@@ -368,6 +373,13 @@ class Game {
   _tick(dt) {
     this.ui.tick(dt);
     this.narrator.update(dt);
+    this.input.updateGamepad();
+    this.ui.setTouchActions({
+      play: this.mode === 'play',
+      carry: !!this.world.carry,
+      self: !!(this.api && this.api._selfAction),
+      lamp: !!this.world.lampKnown,
+    });
     if (this.mode === 'play') {
       this.input.updatePointerHold();
       this.world.update(dt, this.input, this.api);

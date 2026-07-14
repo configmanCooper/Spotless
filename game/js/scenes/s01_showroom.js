@@ -22,6 +22,7 @@ export default function makeScene() {
 
     build(api) {
       this._t = 0; this._speedT = 0; this.hasKey = false; this.caseOpen = false;
+      this._api = api;
       api.floor(40, 0x1b2028);
       api.bounds(-9, 9, -12, 9);
       api.wall(0, -12, 20, 0.3, 0x2a323c);
@@ -148,7 +149,7 @@ export default function makeScene() {
       const stopBtn = P.items.button(0xd94040);
       api.prop(stopBtn, 2.2, 0.5, -2.5);
       api.use({ id: 'stopdemo', mesh: stopBtn, pos: new THREE.Vector3(2.2, 0.55, -2.5), reach: 1.7, prompt: 'STOP DEMO',
-        onUse: (a) => { this._speedT = CYCLE; a.audio.sfx('error'); a.narrator.say('s1_stopdemo', { category: 'REACT' }); } });
+        onUse: (a) => { this._speedT = this._cycleDuration(); a.audio.sfx('error'); a.narrator.say('s1_stopdemo', { category: 'REACT' }); } });
 
       api.world.dust.position.set(0, 0, 5);
       api.setAnchors([{ cx: 0, cz: -3, dist: 18 }]);
@@ -156,7 +157,8 @@ export default function makeScene() {
       api.narrator.say('salesman_1', { category: 'VOICE' });
     },
 
-    _phase() { return Math.floor((this._t % CYCLE) / 6); }, // 0 spill,1 ad,2 applause,3 DIM
+    _cycleDuration() { return this._api && this._api.assist ? 32 : CYCLE; },
+    _phase() { const cycle = this._cycleDuration(); return Math.floor((this._t % cycle) / (cycle / 4)); }, // 0 spill,1 ad,2 applause,3 DIM
 
     update(dt, api) {
       if (api.solved) return;

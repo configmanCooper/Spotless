@@ -83,6 +83,8 @@ html,body{ margin:0; height:100%; background:#0d0b14; overflow:hidden; }
 .settings h3{ margin:.2em 0 .8em; letter-spacing:.1em; font-weight:500; }
 .settings .opt{ display:flex; justify-content:space-between; align-items:center;
   gap:20px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,.06); }
+.setting-note{ color:var(--dim); font-size:11px; line-height:1.4; max-width:460px;
+  margin:-3px 0 7px; opacity:.78; }
 .seg{ display:flex; border:1px solid rgba(255,255,255,.2); border-radius:16px; overflow:hidden; }
 .seg button{ pointer-events:auto; cursor:pointer; background:transparent; color:var(--dim);
   border:0; padding:5px 12px; font-size:12px; }
@@ -110,6 +112,13 @@ html,body{ margin:0; height:100%; background:#0d0b14; overflow:hidden; }
   font-size:16px; line-height:2.1; }
 #credits .roll h1{ font-size:40px; letter-spacing:.4em; margin:.4em 0; font-weight:300; }
 #credits .roll .dim{ color:var(--dim); font-size:13px; letter-spacing:.15em; }
+#credits{ pointer-events:none; }
+#credits.show{ pointer-events:auto; background:rgba(5,6,10,.35); }
+.credit-controls{ position:absolute; right:18px; bottom:18px; z-index:2; display:flex; gap:8px; }
+.credit-controls .btn{ min-width:110px; padding:8px 16px; background:rgba(8,8,12,.78); }
+#credits.static{ background:#08070d; overflow:auto; padding:36px 16px 100px; }
+#credits.static .roll{ position:static !important; line-height:1.8; }
+#credits.static .credit-controls{ position:fixed; }
 
 /* scene select list (plan §3 UI) */
 .scene-select .menu-list { max-height: 60vh; overflow-y: auto; gap: 6px; }
@@ -131,6 +140,10 @@ html,body{ margin:0; height:100%; background:#0d0b14; overflow:hidden; }
 .mem-line{ line-height:1.4; padding-left:12px; border-left:2px solid rgba(255,255,255,.14); }
 .mem-line.ash{ color:#efe8dc; font-style:italic; }
 .mem-line.voice{ color:#ffd9a8; font-style:normal; }
+.mem-meta{ display:flex; gap:10px; align-items:center; margin-bottom:2px; font-size:10px;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--dim); font-style:normal; }
+.mem-who{ color:var(--scene-accent,#7fd7ff); }
+.mem-scene{ opacity:.65; }
 .mem-empty{ color:var(--dim); font-style:italic; }
 
 /* Examine / Observe close-up (plan §2) */
@@ -159,3 +172,22 @@ html,body{ margin:0; height:100%; background:#0d0b14; overflow:hidden; }
 .btn:focus-visible, .seg button:focus-visible, .menu-list button:focus-visible{
   outline:2px solid var(--scene-accent,#7fd7ff); outline-offset:2px; }
 :root.reduced-motion *{ transition:none !important; animation:none !important; }
+
+/* Touch-only contextual controls. Pointer movement remains on the canvas. */
+#touch-controls{ position:absolute; inset:0; display:none; pointer-events:none; z-index:5; }
+#touch-controls button{ pointer-events:auto; display:none; position:absolute; min-width:58px;
+  min-height:48px; border:1px solid rgba(255,255,255,.3); border-radius:24px;
+  background:rgba(10,12,18,.84); color:var(--ink); font-weight:700; letter-spacing:.06em;
+  touch-action:none; }
+#touch-interact{ right:max(18px,env(safe-area-inset-right)); bottom:max(18px,env(safe-area-inset-bottom)); }
+#touch-drop{ right:max(86px,calc(env(safe-area-inset-right) + 86px)); bottom:max(18px,env(safe-area-inset-bottom)); }
+#touch-self{ right:max(18px,env(safe-area-inset-right)); bottom:max(76px,calc(env(safe-area-inset-bottom) + 76px)); }
+#touch-lamp{ right:max(86px,calc(env(safe-area-inset-right) + 86px)); bottom:max(76px,calc(env(safe-area-inset-bottom) + 76px)); }
+#touch-pause{ right:max(18px,env(safe-area-inset-right)); top:max(14px,env(safe-area-inset-top)); }
+@media (pointer:coarse) {
+  #touch-controls.play{ display:block; }
+  #touch-controls.play #touch-interact,
+  #touch-controls.play #touch-pause,
+  #touch-controls.play button.available{ display:block; }
+  #prompt{ bottom:26%; }
+}

@@ -26,6 +26,7 @@ export default function makeScene() {
     build(api) {
       this.beltStopped = false; this.genDead = false; this.hasTag = false; this.lockedOut = false;
       this._shipWindow = 0; this._restartT = 0; this._heapStage = 0;
+      this._api = api;
       // barrels on grid cells [row,col]; crane must drop on each
       this._barrels = [{ r: 1, c: 1, mesh: null }, { r: 2, c: 0, mesh: null }];
       api.floor(40, 0x241d16);
@@ -81,7 +82,7 @@ export default function makeScene() {
       api.prop(P.labelPlaque('RING FOR\nPICKUP', 0.8, 0.4, { bg: '#3a3128', fg: '#ffd' }), 9, 1.6, 3);
 
       const ch = api.chain([
-        { name: 'estop', clue: estop, beat: 's8_step_estop', onAdvance: () => { this.beltStopped = true; this._restartT = 20; } },
+        { name: 'estop', clue: estop, beat: 's8_step_estop', onAdvance: () => { this.beltStopped = true; this._restartT = this._restartDelay(); } },
         { name: 'crane', after: ['estop'], clue: cab, beat: 's8_step_crane' },
         { name: 'fuelcutoff', after: ['crane'], clue: cutoff, beat: 's8_step_fuelcutoff', onAdvance: () => { this.genDead = true; this._restartT = -1; } },
         { name: 'tag', after: ['crane'], clue: board },
@@ -89,7 +90,7 @@ export default function makeScene() {
         { name: 'gate', after: ['lockout'], clue: gate },
         { name: 'clearheap', after: ['gate'], clue: heap },
         { name: 'core', after: ['clearheap'], clue: core },
-        { name: 'bell', after: ['core'], clue: bell, beat: 's8_step_bell', onAdvance: () => { this._shipWindow = 60; } },
+        { name: 'bell', after: ['core'], clue: bell, beat: 's8_step_bell', onAdvance: () => { this._shipWindow = this._shipDuration(); } },
         { name: 'ship', after: ['bell'], clue: blueChute },
       ]);
       this._ch = ch;
@@ -139,7 +140,7 @@ export default function makeScene() {
 
       api.use({ id: 'bell', mesh: bell, pos: new THREE.Vector3(9, 1.0, 3), reach: 1.8, prompt: 'ring for pickup',
         available: () => ch.ready('bell') || (ch.done('bell') && this._shipWindow <= 0 && !ch.done('ship')),
-        onUse: (a) => { this._shipWindow = 60; if (ch.ready('bell')) ch.advance('bell'); else a.narrator.say('s8_step_bell', { category: 'REACT' }); a.audio.sfx('unlock'); } });
+        onUse: (a) => { this._shipWindow = this._shipDuration(); if (ch.ready('bell')) ch.advance('bell'); else a.narrator.say('s8_step_bell', { category: 'REACT' }); a.audio.sfx('unlock'); } });
 
       api.use({ id: 'redbin', mesh: redBin, pos: new THREE.Vector3(-6, 0.7, 3), reach: 2, prompt: 'RED BIN (compacts)',
         acceptCarry: (item, a) => { a.audio.sfx('dump'); if (item.id === 'core') { setTimeout(() => { this._coreMesh.position.set(-2, 0.9, -3); a.group.add(this._coreMesh); this._coreEnt.carried = false; if (!a.interact.entities.includes(this._coreEnt)) a.interact.add(this._coreEnt); }, 700); a.narrator.line('The belt brought it round again.', { id: 's8_recover', category: 'REACT' }); } return true; } });
@@ -174,10 +175,13 @@ export default function makeScene() {
       // atmosphere/pressure only (the real fix is fuelcutoff → lockout). Never reverts progress.
       if (this.beltStopped && !this.genDead) {
         this._restartT -= dt;
-        if (this._restartT <= 0) { this._restartT = 20; this.beltStopped = false; api.narrator.say('s8_restart', { category: 'VOICE' }); }
+        if (this._restartT <= 0) { this._restartT = this._restartDelay(); this.beltStopped = false; api.narrator.say('s8_restart', { category: 'VOICE' }); }
       }
       if (this._shipWindow > 0) this._shipWindow -= dt;
     },
+
+    _restartDelay() { return this._api && this._api.assist ? 30 : 20; },
+    _shipDuration() { return this._api && this._api.assist ? 90 : 60; },
 
     // Deterministic reload from the permanent-lockout milestone (plan §2).
     restoreCheckpoint(api, cp) {

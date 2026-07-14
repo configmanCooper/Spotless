@@ -24,6 +24,8 @@ export class World {
     this.lampKnown = false;    // becomes true in S10
     this.lampBattery = 1;      // drains only when scene sets lampDrains
     this.lampDrains = false;
+    this.lampDrainScale = 1;
+    this.darkMoveScale = 0.55;
     this.canEmptyTrash = false;   // set true by scenes with a dumpster
     this.trash = 0;            // 0..1
     this.screenText = 'CLEANING…';
@@ -55,7 +57,7 @@ export class World {
   get pos() { return this.dust.position; }
 
   setLampKnown(v) { this.lampKnown = v; }
-  resetLamp() { this.lampBattery = 1; this.lampDrains = false; }
+  resetLamp() { this.lampBattery = 1; this.lampDrains = false; this.lampDrainScale = 1; this.darkMoveScale = 0.55; }
   toggleLamp() {
     if (!this.lampKnown) return false;
     if (!this.lampOn && this.lampDrains && this.lampBattery <= CONFIG.LAMP.EMBER + 0.001) return false; // too dead to light
@@ -72,7 +74,7 @@ export class World {
   _updateLamp(dt) {
     if (!this.lampDrains) return;
     if (this.lampOn) {
-      this.lampBattery -= dt / CONFIG.LAMP.DRAIN;
+      this.lampBattery -= dt / (CONFIG.LAMP.DRAIN * this.lampDrainScale);
       if (this.lampBattery <= CONFIG.LAMP.EMBER) { this.lampBattery = CONFIG.LAMP.EMBER; this.lampOn = false; this.rig.lampLight.intensity = 0; }
       else this.rig.lampLight.intensity = 5 * Math.max(0.2, this.lampBattery);
     }
@@ -150,6 +152,7 @@ export class World {
     let moving = false;
     if (mx || mz) {
       input.clickTarget = null;
+      input.cancelQueuedInteract();
       const len = Math.hypot(mx, mz) || 1;
       mx /= len; mz /= len; moving = true;
     } else if (input.clickTarget) {
@@ -161,7 +164,7 @@ export class World {
 
     if (moving && !this.cleaning) {
       // in a draining-lamp scene, walking in the dark is slow (blind), never harmful
-      const darkPenalty = (this.lampDrains && !this.lampOn) ? 0.55 : 1;
+      const darkPenalty = (this.lampDrains && !this.lampOn) ? this.darkMoveScale : 1;
       const sp = CONFIG.DUST_SPEED * darkPenalty * dt;
       this.nav.move(p, mx * sp, mz * sp, CONFIG.DUST_RADIUS);
       this.facing = Math.atan2(mx, mz);
@@ -202,7 +205,9 @@ export class World {
     }
 
     // tap interact (use/talk/pick/place)
-    if (input.consumeInteractTap()) this._tapInteract(near, api);
+    const interactTap = input.consumeInteractTap();
+    const arrivalTap = input.consumeArrivalInteract();
+    if (interactTap || arrivalTap) this._tapInteract(near, api);
 
     // prompt
     this.ui.setPrompt(near && !near.clean ? this.interact.promptFor(near, api)
