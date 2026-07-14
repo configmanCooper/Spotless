@@ -233,12 +233,17 @@ const PLANS = {
       h.tap('cranelat'); h.tap('cranelong'); h.tap('cranedrop');              // B,2 → barrel 1
       h.tap('cranelat'); h.tap('cranelong'); h.tap('cranelong'); h.tap('cranedrop'); // C,1 → barrel 2
       h.tap('fuelcutoff');
+      h.goto(9, -6);
+      if (h.interact.nearest(h.world.dust.position)?.id !== 'tag') throw new Error('LOTO poster shadows the lockout tag');
       h.tap('tag'); h.tap('breaker');                                          // lockout
       h.tap('gate');
       h.cleanEnt('scrapheap'); h.cleanEnt('scrapheap'); h.cleanEnt('scrapheap');
       h.tap('core'); h.tap('bell'); h.tap('bluechute');                        // ring → ship → solve
     },
     async dumb(h) {
+      h.tap('sort_metal'); h.tap('metalbin');
+      h.tap('sort_plastic'); h.tap('plasticbin');
+      h.tap('sort_core'); h.tap('redbin');                   // complete the wrong assigned job
       h.tap('estop'); h.pump(3);                                              // generator coughs it back
       h.tap('cranedrop');                                                     // wrong cell → miss
       h.tap('gate');                                                          // interlock → feedback
@@ -349,8 +354,13 @@ async function solveTower(h, walkAway) {
   h.tap('c5_trickle');
   h.world.lampOn = true; h.pump(0.3);                     // lamp on → c5_lampon
   h.tap('c5_cradle');                                     // ignite → reveal
-  h.pumpUntil(() => !!h.ent('speck'), 120);               // ordered spatial reveal → speck offered
-  if (walkAway) { h.goto(0, 46); h.pump(3); } else { h.cleanEnt('speck'); }
+  h.pumpUntil(() => h.scene._revealStage === 'enter', 60);
+  h.goto(0, 40); h.pumpUntil(() => h.scene._revealStage === 'ash', 30);
+  h.tap('ash'); h.pumpUntil(() => h.scene._revealStage === 'lens', 30);
+  h.tap('lamp_lens'); h.pumpUntil(() => h.scene._revealStage === 'window', 30);
+  h.tap('lamp_window');
+  h.pumpUntil(() => !!h.ent('speck'), 30);                 // player-paced reveal → speck offered
+  if (walkAway) { h.goto(5, 46); h.pump(3); } else { h.cleanEnt('speck'); }
   h.pumpUntil(() => h.solved, 60);                        // ending line → solve + credits
 }
 

@@ -23,6 +23,7 @@ export class Hints {
     this.shimmerOn = false;
     this.solved = false;
     this.consumed = 0;
+    this.byStep = {};
   }
   // hintsSpec: [id,id,id]  OR  { stepName: [id,id,id], ... }
   begin(hintsSpec, shimmerCb, scale = 1) {
@@ -64,7 +65,11 @@ export class Hints {
   _fire(i) {
     this.tier = i + 1;
     const id = this.hints[i];
-    if (id && this.narrator.say(id, { category: 'HINT' })) this.consumed++;
+    if (id && this.narrator.say(id, { category: 'HINT' })) {
+      this.consumed++;
+      const step = this.active || '__single';
+      this.byStep[step] = (this.byStep[step] || 0) + 1;
+    }
   }
-  stats() { return { solveTime: this.total, stepTime: this.clock, hints: this.consumed }; }
+  stats() { return { solveTime: this.total, stepTime: this.clock, hints: this.consumed, hintSteps: Object.assign({}, this.byStep) }; }
 }

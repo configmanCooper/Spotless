@@ -106,7 +106,12 @@ export default function makeScene() {
         prompt: () => this._phase() === 3 ? 'take the staff key (camera is away)' : 'the key hook (camera watching)',
         available: () => !ch.done('staffkey'),
         onUse: (a) => {
-          if (this._phase() !== 3) { a.audio.sfx('error'); a.narrator.say('s1_camcaught', { category: 'VOICE' }); return; }
+          if (this._phase() !== 3) {
+            a.audio.sfx('error'); a.narrator.say('s1_camcaught', { category: 'VOICE' });
+            a.wrongTry('s1_camera', 's1_camera_nudge', { after: 3 });
+            return;
+          }
+          a.resetWrong('s1_camera');
           this.hasKey = true; hook.visible = false; a.audio.sfx('pick'); ch.advance('staffkey');
         },
       });

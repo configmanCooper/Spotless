@@ -21,6 +21,7 @@ export default function makeScene() {
 
     build(api) {
       this._phase = 'climb';
+      this._revealStage = null;
       api.floor(24, 0x14161f);
       api.bounds(-6, 6, -6, 46);
       api.fx.motes({ count: 90, area: [10, 44, 10], center: [0, 6, 20], color: 0xffe3a8, opacity: 0.16, size: 0.05 });
@@ -121,6 +122,7 @@ export default function makeScene() {
       }
       lampGroup.add(this._lens);
       api.prop(lampGroup, 0, 2.6, 44);
+      this._lampGroup = lampGroup;
       this._beam = new THREE.SpotLight(0xffd777, 0, 70, Math.PI / 8, 0.4); this._beam.position.set(0, 3, 44);
       const bt = new THREE.Object3D(); bt.position.set(0, 0, 0); api.group.add(this._beam); api.group.add(bt); this._beam.target = bt;
 
@@ -158,7 +160,10 @@ export default function makeScene() {
       this._hookEnt = api.use({ id: 'c0_hook', mesh: hookMesh, pos: hookMesh.position, reach: 1.7, pickable: true, dropY: 0.6, prompt: 'take the boathook (keep it!)',
         available: () => ch.done('c0_unchain') && !ch.allDone(), onPick: () => { if (ch.ready('c0_hook')) ch.advance('c0_hook'); } });
       api.use({ id: 'c0_door', mesh: doorbar, pos: new THREE.Vector3(0, 0.9, 6.4), reach: 2, prompt: 'pry the door bar with the hook',
-        available: () => ch.ready('c0_door'), onUse: (a) => { if (a.world.carry && a.world.carry.entity.id === 'c0_hook') ch.advance('c0_door'); else { a.audio.sfx('error'); a.narrator.say('s11_needhook', { category: 'REACT' }); } } });
+        available: () => ch.ready('c0_door'), onUse: (a) => {
+          if (a.world.carry && a.world.carry.entity.id === 'c0_hook') { a.resetWrong('s11_hook'); ch.advance('c0_door'); }
+          else { a.audio.sfx('error'); a.narrator.say('s11_needhook', { category: 'REACT' }); a.wrongTry('s11_hook', 's11_hook_nudge', { after: 2 }); }
+        } });
 
       // ---- C1 ----
       api.clean({ id: 'c1_contacts', mesh: contacts, pos: contacts.position, reach: 1.7, cleanTime: 1.1, trashAmount: 0.02, removeOnClean: false,
@@ -168,7 +173,10 @@ export default function makeScene() {
       this._bk = bk;
       api.use({ id: 'c1_power', mesh: powerLever, pos: new THREE.Vector3(3, 1.0, 11), reach: 1.8, prompt: 'throw the main breaker',
         available: () => ch.ready('c1_power'),
-        onUse: (a) => { if (bk[0].value === 'ON' && bk[1].value === 'OFF' && bk[2].value === 'ON') ch.advance('c1_power'); else { a.audio.sfx('error'); a.narrator.say('s11_wrongpattern', { category: 'REACT' }); bk[1].set(0); } } });
+        onUse: (a) => {
+          if (bk[0].value === 'ON' && bk[1].value === 'OFF' && bk[2].value === 'ON') { a.resetWrong('s11_pattern'); ch.advance('c1_power'); }
+          else { a.audio.sfx('error'); a.narrator.say('s11_wrongpattern', { category: 'REACT' }); a.wrongTry('s11_pattern', 's11_pattern_nudge', { after: 2 }); bk[1].set(0); }
+        } });
 
       // ---- C2 ----
       this._letterEnt = api.use({ id: 'c2_letter', mesh: letter2, pos: letter2.position, reach: 1.6, pickable: false, stamped: false, dropY: 0.9,
@@ -196,7 +204,7 @@ export default function makeScene() {
           if (item.id === 'c3_prism1' && ch.ready('c3_p1')) { a.audio.sfx('place'); ch.advance('c3_p1'); return true; }
           if (item.id === 'c3_pendant' && ch.ready('c3_p2')) { a.audio.sfx('place'); ch.advance('c3_p2'); return true; }
           if (item.id === 'c3_prism3' && ch.ready('c3_p3')) { a.audio.sfx('place'); ch.advance('c3_p3'); return true; }
-          a.audio.sfx('error'); a.narrator.say('s11_wrongprism', { category: 'REACT' }); return false;
+          a.audio.sfx('error'); a.narrator.say('s11_wrongprism', { category: 'REACT' }); a.wrongTry('s11_prism', 's11_prism_nudge', { after: 2 }); return false;
         } });
 
       // ---- C4 ----
@@ -204,9 +212,15 @@ export default function makeScene() {
       const hlift = api.dial({ id: 'c4_hoistlift', label: 'Lift', pos: { x: hoistLiftD.x, z: hoistLiftD.z, y: 0.9 }, positions: ['LO', 'MID', 'HI'], available: () => ch.ready('c4_hoist') });
       this._hlat = hlat; this._hlift = hlift;
       api.use({ id: 'c4_raise', mesh: gearRing, pos: new THREE.Vector3(3, 0.9, 29), reach: 2, prompt: 'raise the spare gear to the window',
-        available: () => ch.ready('c4_hoist'), onUse: (a) => { if (hlat.value === 'C' && hlift.value === 'HI') { a.audio.sfx('unlock'); ch.advance('c4_hoist'); } else a.narrator.line('The hoist swung wide of the window.', { id: 's11_hoistmiss', category: 'REACT' }); } });
+        available: () => ch.ready('c4_hoist'), onUse: (a) => {
+          if (hlat.value === 'C' && hlift.value === 'HI') { a.audio.sfx('unlock'); a.resetWrong('s11_hoist'); ch.advance('c4_hoist'); }
+          else { a.narrator.line('The hoist swung wide of the window.', { id: 's11_hoistmiss', category: 'REACT' }); a.wrongTry('s11_hoist', 's11_hoist_nudge', { after: 3 }); }
+        } });
       api.use({ id: 'c4_pry', mesh: jammed, pos: new THREE.Vector3(3, 1.3, 28.85), reach: 1.9, prompt: 'pry the jammed gear (needs the hook)',
-        available: () => ch.ready('c4_pry'), onUse: (a) => { if (a.world.carry && a.world.carry.entity.id === 'c0_hook') ch.advance('c4_pry'); else { a.audio.sfx('error'); a.narrator.say('s11_needhook', { category: 'REACT' }); } } });
+        available: () => ch.ready('c4_pry'), onUse: (a) => {
+          if (a.world.carry && a.world.carry.entity.id === 'c0_hook') { a.resetWrong('s11_hook'); ch.advance('c4_pry'); }
+          else { a.audio.sfx('error'); a.narrator.say('s11_needhook', { category: 'REACT' }); a.wrongTry('s11_hook', 's11_hook_nudge', { after: 2 }); }
+        } });
       let ballastMoved = 0;
       const ballastUse = (mesh, id) => api.use({ id, mesh, pos: mesh.position, reach: 1.6, pickable: true, dropY: 0.7, prompt: 'shift a ballast block', available: () => ch.ready('c4_ballast'), onPick: () => { ballastMoved++; if (ballastMoved >= 2 && ch.ready('c4_ballast')) ch.advance('c4_ballast'); } });
       ballastUse(ballastA, 'c4_ballastA'); ballastUse(ballastB, 'c4_ballastB');
@@ -227,6 +241,32 @@ export default function makeScene() {
       api.use({ id: 'c5_cradle', mesh: cradle, pos: new THREE.Vector3(3, 0.9, 35), reach: 1.9, prompt: 'climb into the igniter cradle',
         available: () => ch.ready('c5_cradle'),
         onUse: (a) => { if (!a.world.lampOn) { a.audio.sfx('error'); a.narrator.say('s11_c5_lampon_1', { category: 'HINT' }); return; } ch.advance('c5_cradle'); } });
+
+      // Player-paced reveal beats in the lamp room. Each interaction advances one
+      // short thought so Ash's identity lands spatially rather than as a cutscene wall.
+      api.use({ id: 'ash', mesh: this._ash, pos: this._ashPos, reach: 2.5, prompt: 'approach the old robot',
+        available: () => this._revealStage === 'ash',
+        onUse: (a) => {
+          this._revealStage = 'ash_speaking'; a.cameraPush(0.8, 1.8);
+          a.narrator.say('s11_a1', { category: 'STORY', spatial: true, onDone: () => { this._revealStage = 'lens'; } });
+        } });
+      api.use({ id: 'lamp_lens', mesh: lampGroup, pos: new THREE.Vector3(0, 2.6, 44), reach: 3.0, prompt: 'look into the turning lens',
+        available: () => this._revealStage === 'lens',
+        onUse: (a) => {
+          this._revealStage = 'lens_speaking'; a.cameraPush(0.6, 1.6);
+          a.openExamine({ title: 'The Fresnel lens', accent: '#ffd777', lines: [
+            'Every repaired piece catches the same light and sends it somewhere new.',
+            'Ash has kept it turning for thirty years without an assignment.',
+          ] });
+          a.narrator.say('s11_a2', { category: 'STORY', spatial: true, onDone: () => { this._revealStage = 'window'; } });
+        } });
+      const windowRail = P.box(2.2, 0.5, 0.16, 0x293040, { metal: 0.2 }); api.prop(windowRail, 4.5, 0.5, 43.5);
+      api.use({ id: 'lamp_window', mesh: windowRail, pos: new THREE.Vector3(4.5, 0.7, 43.5), reach: 2.2, prompt: 'look out over the water',
+        available: () => this._revealStage === 'window',
+        onUse: (a) => {
+          this._revealStage = 'window_speaking'; a.cameraPush(0.45, 2.0);
+          a.narrator.say('s11_a3', { category: 'STORY', spatial: true, onDone: () => this._offerSpeck(a) });
+        } });
 
       api.world.dust.position.set(0, 0, -3);
       api.setAnchors([
@@ -251,6 +291,12 @@ export default function makeScene() {
             api.audio.sfx('lamp_on');
           }
         }
+      }
+      if (this._phase === 'reveal' && this._revealStage === 'enter' && api.world.dust.position.z > 39) {
+        this._revealStage = 'reveal_speaking';
+        this._ash.rotation.y = 0;
+        api.cameraPush(0.9, 2.0);
+        api.narrator.say('s11_reveal', { category: 'STORY', spatial: true, onDone: () => { this._revealStage = 'ash'; } });
       }
       if (this._phase !== 'climb') {
         // the great lens turns once the lamp is lit (payoff ambient motion)
@@ -285,6 +331,7 @@ export default function makeScene() {
     _ignite(api, doors) {
       // the beam catches — you are the missing part; then the spatial reveal
       this._phase = 'reveal';
+      this._revealStage = 'opening';
       this._lampMesh.material.emissive.setHex(0xffd777); this._lampMesh.material.emissiveIntensity = 2; this._beam.intensity = 8;
       // the Fresnel lens catches the light, ring by ring
       if (this._lensRings) this._lensRings.forEach((r, i) => setTimeout(() => { r.mat.emissive.setHex(0xffe3a8); r.mat.emissiveIntensity = 1.3; r.mat.opacity = 0.55; }, 120 * i));
@@ -295,13 +342,15 @@ export default function makeScene() {
       api.narrator.mode = 'spatial';
       // ground the voice at the old robot by the light (Phase 1 spatial hookup)
       try { api.spatialSource(this._ash.getWorldPosition(new THREE.Vector3())); } catch {}
-      this._ash.rotation.y = 0;
-      const reveal = [];
-      if (api.memory.get('gaveBarcode')) reveal.push('s11_barcode_beat');
-      reveal.push('s11_c5_cradle_beat', 's11_reveal', 's11_a1', 's11_a2', 's11_a3');
-      api.narrator.saySequence(reveal, {
+      const opening = [];
+      if (api.memory.get('gaveBarcode')) opening.push('s11_barcode_beat');
+      opening.push('s11_c5_cradle_beat');
+      api.narrator.saySequence(opening, {
         lineOpts: { category: 'STORY', spatial: true },
-        onDone: () => this._offerSpeck(api),
+        onDone: () => {
+          this._revealStage = 'enter';
+          api.toast('The lamp-room door is open. Someone is waiting by the light.');
+        },
       });
     },
 
@@ -312,14 +361,23 @@ export default function makeScene() {
       const speck = P.mess('crumb', 0xcfc7b4); api.prop(speck, 0, 0.75, 41);
       api.toast('One speck of dust. The old CLEAN prompt, one last time.');
       let decided = false;
-      const end = (clean) => { if (decided) return; decided = true; api.narrator.say(clean ? 's11_clean' : 's11_leave', { category: 'STORY', spatial: true, onDone: () => this._lightTheLamp(api) }); };
+      const end = (clean) => {
+        if (decided) return;
+        decided = true;
+        this._choice = clean ? 'clean' : 'leave';
+        api.narrator.say(clean ? 's11_clean' : 's11_leave', { category: 'STORY', spatial: true, onDone: () => this._lightTheLamp(api) });
+      };
       api.clean({ id: 'speck', mesh: speck, pos: speck.position, trashAmount: 0, cleanTime: 1.0, onClean: () => end(true) });
       this._walkAwayCheck = () => { if (!decided && api.world.dust.position.distanceTo(new THREE.Vector3(0, 0, 41)) > 6) end(false); };
     },
 
     _lightTheLamp(api) {
       if (this._phase === 'end') return; this._phase = 'end';
-      api.narrator.say('s11_beam', { category: 'STORY', spatial: true, onDone: () => { api.solve(); api.credits(); } });
+      const clean = this._choice === 'clean';
+      this._beam.color.setHex(clean ? 0xffd777 : 0xffe6b0);
+      this._beam.angle = clean ? Math.PI / 9 : Math.PI / 7;
+      api.narrator.say(clean ? 's11_beam_clean' : 's11_beam_leave',
+        { category: 'STORY', spatial: true, onDone: () => { api.solve(); api.credits(); } });
     },
 
     lateUpdate(dt, api) { if (this._phase === 'choice' && this._walkAwayCheck) this._walkAwayCheck(); },

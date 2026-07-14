@@ -52,8 +52,14 @@ class Game {
     this.input = new Input(this.canvas, () => this.renderer.camera);
     this.input.onLamp = () => this._lamp();
     this.input.onPause = () => this._togglePause();
-    this.input.onDrop = () => { if (this.mode === 'play' && this.world.dropCarried()) { this.ui.toast('Dropped.', 1200); if (this.api && this.api._telemetry) this.api._telemetry.drops++; } };
+    this.input.onDrop = () => { if (this.mode === 'play' && this.world.dropCarried()) this.ui.toast('Dropped.', 1200); };
     this.input.onSelf = () => { if (this.mode === 'play' && this.api) this.api.triggerSelf(); };
+    this.world.onDrop = (reason) => {
+      if (!this.api || !this.api._telemetry) return;
+      this.api._telemetry.drops++;
+      if (reason === 'auto') this.api._telemetry.autoDrops++;
+      else this.api._telemetry.manualDrops++;
+    };
 
     this.group = null;         // current scene group
     this.scene = null;         // current scene object
@@ -207,6 +213,7 @@ class Game {
     this.audio.setRoomTone(this.scene.roomTone || 'room');
 
     this.scene.build(this.api);
+    if (this.api._chain) this.api._chain.validateHintPools(this.scene.hints);
     this.ui.setTask(this.scene.statedTask);
     const scale = CONFIG.HINT_SCALE[id] || 1;
     this.hints.begin(this.scene.hints || [], (on) => { this.api.setShimmer(on); }, scale);
@@ -224,7 +231,16 @@ class Game {
 
   _telemetryRecord() {
     const t = (this.api && this.api._telemetry) || {};
-    return Object.assign({}, this.hints.stats(), { wrong: t.wrong | 0, drops: t.drops | 0, examines: t.examines | 0, reloads: t.reloads | 0 });
+    return Object.assign({}, this.hints.stats(), {
+      wrong: t.wrong | 0,
+      wrongBy: Object.assign({}, t.wrongBy || {}),
+      drops: t.drops | 0,
+      manualDrops: t.manualDrops | 0,
+      autoDrops: t.autoDrops | 0,
+      examines: t.examines | 0,
+      reloads: t.reloads | 0,
+      stepTimes: Object.assign({}, t.stepTimes || {}),
+    });
   }
 
   _onSceneSolved() {

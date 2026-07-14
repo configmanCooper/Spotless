@@ -61,7 +61,15 @@ export default function makeScene() {
       // wears the same colour as the rope that raises it (a match, not a number).
       const ropeCols = [0xd94040, 0x4a7ac9, 0x3fae5a, 0xe0a83a]; // red, blue, GREEN(correct), amber
       const CORRECT = 2;
-      api.prop(P.labelPlaque('FLY RAIL', 0.7, 0.24, { bg: '#241820', fg: '#d9435b' }), -8.2, 2.2, -8.7);
+      const flySign = P.labelPlaque('FLY RAIL', 0.7, 0.24, { bg: '#241820', fg: '#d9435b' }); api.prop(flySign, -8.2, 2.2, -8.7);
+      api.examine({ id: 'flyplot', mesh: flySign, pos: flySign.position, reach: 2.1, prompt: 'examine the fly plot',
+        available: () => !this._flySeen && this._ch && this._ch.ready('rope'),
+        onExamine: () => { this._flySeen = true; },
+        title: 'Fly plot', accent: '#d9435b', lines: [
+          'Four lines, each tagged by colour and rig mark.',
+          'The lowered LX batten carries the same green triangle as line three.',
+          'Pulling the matching line will raise the obstruction over the ladder.',
+        ] });
       const ropeEffects = ['a curtain', 'a snow bag', null, 'a sandbag'];
       for (let i = 0; i < 4; i++) {
         const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 3, 6), P.mat(0x8a7a4a));
@@ -69,7 +77,10 @@ export default function makeScene() {
         const band = P.box(0.09, 0.16, 0.09, ropeCols[i], { emissive: ropeCols[i], emissiveIntensity: 0.25 }); band.position.set(-9 + i * 0.5, 1.1, -8); api.group.add(band);
         api.use({ id: 'rope_' + i, mesh: rope, pos: new THREE.Vector3(-9 + i * 0.5, 1.5, -8), reach: 1.7, effect: ropeEffects[i],
           prompt: 'pull this line', available: () => this._ch.ready('rope') && !this.battenUp,
-          onUse: (a, e) => { if (i === CORRECT) { this.battenUp = true; this._batten && (this._batten.visible = false); a.audio.sfx('unlock'); this._ch.advance('rope'); } else { a.audio.sfx('error'); a.narrator.say('s7_wrongrope', { category: 'REACT' }); } } });
+          onUse: (a, e) => {
+            if (i === CORRECT) { this.battenUp = true; this._batten && (this._batten.visible = false); a.audio.sfx('unlock'); a.resetWrong('s7_rope'); this._ch.advance('rope'); }
+            else { a.audio.sfx('error'); a.narrator.say('s7_wrongrope', { category: 'REACT' }); a.wrongTry('s7_rope', 's7_rope_nudge', { after: 2 }); }
+          } });
       }
 
       // the catwalk ladder (blocked by the lowered batten until it's raised)
@@ -86,6 +97,14 @@ export default function makeScene() {
       // lighting board + cue sheet + preset dial (1..8)
       const board = P.box(1.2, 0.9, 0.6, 0x33323a, { emissive: 0x0a0a12 }); api.prop(board, 8, 0.45, -5); api.nav.addBox(8, -5, 1.2, 0.6);
       api.mountSign(board, 'CUE: ACT II Sc4\nVERA ALONE — PRESET 7', 1.0, 0.42, [0, 0.55, 0.32], { bg: '#33323a', fg: '#d9435b' });
+      api.examine({ id: 'cuesheet', mesh: board, pos: board.position, reach: 2, prompt: 'read the cue sheet',
+        available: () => !this._cueSeen && this._ch && this._ch.ready('preset'),
+        onExamine: () => { this._cueSeen = true; },
+        title: 'Lighting cue sheet', accent: '#d9435b', lines: [
+          'ACT II, SCENE 4 — VERA ALONE.',
+          'The lighting note is underlined twice: PRESET 7.',
+          'The empty downstage circle is where the cue is meant to land.',
+        ] });
 
       // sweepable busywork
       for (let i = 0; i < 4; i++) { const d = P.mess('crumb', 0x6a5a4a); api.prop(d, -7 + i * 0.5, 0.14, 2); api.clean({ id: 'sweep_' + i, mesh: d, pos: d.position, trashAmount: 0.02, fake: true }); }
@@ -109,7 +128,10 @@ export default function makeScene() {
       api.use({ id: 'boxkey', mesh: prompter, pos: new THREE.Vector3(5, 1, -2), reach: 1.9,
         prompt: () => this._snoring() ? 'lift the key (he\'s snoring)' : 'the sleeping prompter',
         available: () => ch.ready('boxkey'),
-        onUse: (a) => { if (this._snoring()) { boxKeyMesh.visible = false; this.hasKey = true; a.audio.sfx('pick'); ch.advance('boxkey'); } else { a.audio.sfx('error'); a.narrator.say('s7_prompterstir', { category: 'REACT' }); } } });
+        onUse: (a) => {
+          if (this._snoring()) { boxKeyMesh.visible = false; this.hasKey = true; a.audio.sfx('pick'); a.resetWrong('s7_snore'); ch.advance('boxkey'); }
+          else { a.audio.sfx('error'); a.narrator.say('s7_prompterstir', { category: 'REACT' }); a.wrongTry('s7_snore', 's7_snore_nudge', { after: 2 }); }
+        } });
 
       api.use({ id: 'promptbox', mesh: box, pos: new THREE.Vector3(5, 0.5, -3), reach: 1.8, prompt: 'unlock the prompt box',
         available: () => ch.ready('pageb'), onUse: (a) => { this.hasB = true; a.world.setScreen('PAGES:\n"...and yet I stayed."'); a.audio.sfx('unlock'); ch.advance('pageb'); } });

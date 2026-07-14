@@ -28,7 +28,7 @@ export function createApi(core, group, onSolve) {
     _shimmerList: [],
     _shimmerActive: false,
     _stepClueMesh: null,
-    _telemetry: { wrong: 0, drops: 0, examines: 0, reloads: 0 },
+    _telemetry: { wrong: 0, wrongBy: {}, drops: 0, manualDrops: 0, autoDrops: 0, examines: 0, reloads: 0, stepTimes: {} },
 
     // ---- Examine / Observe (plan §2): a focused close-up read of an object,
     // entered and exited with the same one Interact verb. Content is
@@ -104,6 +104,7 @@ export function createApi(core, group, onSolve) {
     wrongTry(kind, nudgeId, opts = {}) {
       const after = opts.after ?? 3;
       api._telemetry.wrong++;
+      api._telemetry.wrongBy[kind] = (api._telemetry.wrongBy[kind] || 0) + 1;
       api._wrongCounts[kind] = (api._wrongCounts[kind] || 0) + 1;
       if (api._wrongCounts[kind] >= after) { api._wrongCounts[kind] = 0; return api.nudge(nudgeId, { cooldown: opts.cooldown ?? 25 }); }
       return false;
@@ -249,9 +250,26 @@ export function createApi(core, group, onSolve) {
       const steps = new Map(); const order = [];
       for (const d of defs) {
         const s = typeof d === 'string' ? { name: d } : d;
+        if (!s || !s.name) throw new Error('chain step is missing a name');
+        if (steps.has(s.name)) throw new Error(`duplicate chain step: ${s.name}`);
         steps.set(s.name, { name: s.name, after: s.after || [], beat: s.beat, clue: s.clue, done: false, onAdvance: s.onAdvance });
         order.push(s.name);
       }
+      for (const n of order) for (const dep of steps.get(n).after) {
+        if (!steps.has(dep)) throw new Error(`chain step '${n}' depends on unknown step '${dep}'`);
+      }
+      const visiting = new Set(), visited = new Set();
+      const visit = (n) => {
+        if (visiting.has(n)) throw new Error(`chain dependency cycle at '${n}'`);
+        if (visited.has(n)) return;
+        visiting.add(n);
+        for (const dep of steps.get(n).after) visit(dep);
+        visiting.delete(n); visited.add(n);
+      };
+      for (const n of order) visit(n);
+      const readyAt = new Map();
+      const now = () => (api.hints && api.hints.total) || 0;
+      for (const n of order) if (!steps.get(n).after.length) readyAt.set(n, 0);
       const ch = {
         steps, order,
         done(n) { const s = steps.get(n); return !!(s && s.done); },
@@ -263,12 +281,16 @@ export function createApi(core, group, onSolve) {
         total: order.length,
         advance(n, opts = {}) {
           const s = steps.get(n);
-          if (!s || s.done || !s.after.every(a => ch.done(a))) return false;
+          if (!s) throw new Error(`advance called with unknown chain step '${n}'`);
+          if (s.done || !s.after.every(a => ch.done(a))) return false;
+          const started = readyAt.get(n) ?? now();
+          api._telemetry.stepTimes[n] = Math.max(0, now() - started);
           s.done = true;
           api.hints && api.hints.progress();
           if (s.beat && !opts.silent) { api.narrator.say(s.beat, { category: 'STORY' }); api.cameraPush(0.85, 1.3); }
           if (s.onAdvance) s.onAdvance(api, opts);
           const cur = ch.current();
+          for (const next of order) if (ch.ready(next) && !readyAt.has(next)) readyAt.set(next, now());
           api._setStepClue(cur ? steps.get(cur).clue : null);
           api.hints && api.hints.setPool(cur || '__done');
           return true;
@@ -276,7 +298,10 @@ export function createApi(core, group, onSolve) {
         // deterministically re-apply milestone steps on checkpoint reload, in
         // dependency order, without replaying STORY beats (plan §2 checkpoints).
         restore(names) {
-          const want = new Set(names || []);
+          const requested = new Set(names || []);
+          const unknown = [...requested].filter(n => !steps.has(n));
+          if (unknown.length) console.warn(`checkpoint ignored unknown chain steps: ${unknown.join(', ')}`);
+          const want = new Set([...requested].filter(n => steps.has(n)));
           let guard = 0;
           while (guard++ < order.length + 2) {
             let progressed = false;
@@ -284,6 +309,15 @@ export function createApi(core, group, onSolve) {
               if (want.has(n) && !steps.get(n).done && ch.ready(n)) { ch.advance(n, { silent: true, restore: true }); progressed = true; }
             }
             if (!progressed) break;
+          }
+          const missing = [...want].filter(n => !ch.done(n));
+          if (missing.length) console.warn(`checkpoint could not restore chain steps: ${missing.join(', ')}`);
+          return { restored: [...want].filter(n => ch.done(n)), ignored: unknown, missing };
+        },
+        validateHintPools(pools) {
+          if (!pools || Array.isArray(pools)) return;
+          for (const name of Object.keys(pools)) {
+            if (!steps.has(name)) throw new Error(`hint pool '${name}' has no matching chain step`);
           }
         },
       };

@@ -170,12 +170,24 @@ function serve() {
       g.state.flags = {};
       const heard = [];
       g.narrator.onLine = (id) => heard.push(id);
+      const drain = (until) => {
+        for (let i = 0; i < 80 && !until(); i++) {
+          g.narrator.update(0);
+          if (g.narrator.cur) g.narrator.cur.t = 0;
+          g.narrator.update(0);
+        }
+      };
       g.scene._ignite(g.api, { lamp: { userData: { open() {} } } });
-      for (let i = 0; i < 30 && heard.length < 5; i++) {
-        g.narrator.update(0);
-        if (g.narrator.cur) g.narrator.cur.t = 0;
-        g.narrator.update(0);
-      }
+      drain(() => g.scene._revealStage === 'enter');
+      g.world.dust.position.z = 40; g.scene.update(0, g.api);
+      drain(() => g.scene._revealStage === 'ash');
+      g.interact.entities.find(e => e.id === 'ash').onUse(g.api);
+      drain(() => g.scene._revealStage === 'lens');
+      g.interact.entities.find(e => e.id === 'lamp_lens').onUse(g.api);
+      drain(() => g.scene._revealStage === 'window');
+      g.ui.hideExamine(); g.mode = 'play'; g.input.enabled = true;
+      g.interact.entities.find(e => e.id === 'lamp_window').onUse(g.api);
+      drain(() => g.scene._phase === 'choice');
       return heard.slice(0, 5);
     });
     assert('S11 reveal begins in authored order', revealOrder.join(',') === 's11_c5_cradle_beat,s11_reveal,s11_a1,s11_a2,s11_a3');

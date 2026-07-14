@@ -6,7 +6,14 @@ export class Debug {
     this.records = [];
     this.el = null;
   }
-  attach(el) { this.el = el; if (this.on) el.classList.add('show'); }
+  attach(el) {
+    this.el = el;
+    if (this.on) {
+      el.classList.add('show', 'clickable');
+      el.title = 'Click to export local playtest telemetry';
+      el.onclick = () => this.export();
+    }
+  }
   record(sceneId, stats) {
     this.records.push({ scene: sceneId, ...stats });
     this.render();
@@ -15,6 +22,16 @@ export class Debug {
   setBudget(calls, tris, geos, texs) {
     this._budget = `draws:${calls}  tris:${(tris / 1000).toFixed(1)}k  geo:${geos}  tex:${texs}`;
     this.render();
+  }
+  export() {
+    const blob = new Blob([JSON.stringify(this.records, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'spotless-playtest.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   render() {
     if (!this.el || !this.on) return;

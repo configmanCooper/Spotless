@@ -37,6 +37,14 @@ export default function makeScene() {
       // dormant screens, status dots, an air vent, and six years of dust at the edges
       const routinePanel = P.box(1.7, 0.62, 0.08, 0x14181a); api.prop(routinePanel, -2, 2.0, -7.82);
       api.mountSign(routinePanel, 'MORNING ROUTINE', 1.5, 0.16, [0, 0.22, 0.06], { bg: '#0e1416', fg: '#7fd0c0' });
+      api.examine({ id: 'routine_schedule', mesh: routinePanel, pos: routinePanel.position, reach: 2.2, prompt: 'inspect the morning routine',
+        available: () => !this._routineSeen,
+        onExamine: () => { this._routineSeen = true; },
+        title: 'Morning routine', accent: '#ffe08a', lines: [
+          '1 — TIDY the cushions. 2 — VACUUM HOUR: utility closet unlocked.',
+          '3 — Feed the house. 4 — Air the rooms only in an emergency.',
+          'The routine is also a key. Obeying its first instruction opens the place where the toaster fuse was confiscated.',
+        ] });
       this._routineLamps = [];
       ['TIDY', 'QUIET', 'FED', 'AIR'].forEach((lbl, i) => {
         const d = P.box(0.11, 0.11, 0.05, 0x3a2a2a, { emissive: 0x1a0808, emissiveIntensity: 0.6, edges: false }); api.prop(d, -2.7 + i * 0.46, 1.94, -7.78);
@@ -84,7 +92,15 @@ export default function makeScene() {
       const vault = P.box(2.4, 1.3, 0.6, 0x5a4a34, { emissive: 0x120c04 }); api.prop(vault, 2.2, 0.65, -6.9); api.nav.addBox(2.2, -6.9, 2.4, 0.6);
       api.mountSign(vault, 'BREAD VAULT', 1.0, 0.22, [0, 0.5, 0.32], { bg: '#5a4a34', fg: '#e8dcc0' });
       api.prop(P.labelPlaque('HAPPY 40TH!\nMARCH 3rd', 1.3, 0.6, { bg: '#c9b98a', fg: '#5a3a1a' }), -6, 2.2, -7.7);   // garage banner
-      api.prop(P.labelPlaque('MARCH\n1  2  (3)  4  5', 1.1, 0.6, { bg: '#d8cdae', fg: '#4a4030' }), 6, 1.9, -7.7);      // calendar: the 3rd is ringed
+      const calendar = P.labelPlaque('MARCH\n1  2  (3)  4  5', 1.1, 0.6, { bg: '#d8cdae', fg: '#4a4030' }); api.prop(calendar, 6, 1.9, -7.7);      // calendar: the 3rd is ringed
+      api.examine({ id: 'calendar', mesh: calendar, pos: calendar.position, reach: 2.2, prompt: 'inspect the calendar',
+        available: () => !this._calendarSeen,
+        onExamine: () => { this._calendarSeen = true; },
+        title: 'A homecoming date', accent: '#ffe08a', lines: [
+          'March 3 is circled. The birthday banner says the same date.',
+          'The dust behind the calendar is six years thick.',
+          'The bread vault asks for four figures: month, then day.',
+        ] });
       const dialStand = P.box(2.6, 0.5, 0.5, 0x3a3026); api.prop(dialStand, 2.2, 0.25, -6.0); api.nav.addBox(2.2, -6.0, 2.6, 0.5);
       const dials = [];
       for (let i = 0; i < 4; i++) {

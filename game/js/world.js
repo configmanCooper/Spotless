@@ -33,6 +33,7 @@ export class World {
 
     this.enabled = true;       // disabled during cutscenes
     this.onInteractResult = null; // optional scene callback
+    this.onDrop = null;
     // ---- hand-authored animation state (plan §3 character animation) ----
     this._reachT = 0;          // arm-reach pulse timer (pick/place/clean)
     this._idleP = 0;           // idle servo phase
@@ -82,7 +83,7 @@ export class World {
 
   // pick up an entity's mesh (one item only; auto-drops any current item)
   pickUp(entity) {
-    if (this.carry) this.drop();
+    if (this.carry) this.drop('auto');
     const mesh = entity.carryMesh || entity.mesh;
     if (!mesh) return false;
     const origParent = mesh.parent;               // remember where it lived (scene group)
@@ -101,7 +102,7 @@ export class World {
     const s = typeof p === 'function' ? '' : (p || entity.id);
     return String(s).replace(/^(take|lift|the)\s+/i, '').replace(/\s*\(.*\)$/, '') || entity.id;
   }
-  drop() {
+  drop(reason = 'manual') {
     if (!this.carry) return;
     const { entity, mesh, origParent } = this.carry;
     const wp = new THREE.Vector3();
@@ -113,11 +114,12 @@ export class World {
     this.carry = null;
     this.reach();
     this.audio?.sfx('place');
+    this.onDrop && this.onDrop(reason, entity);
   }
   // Q key: drop whatever we're holding
   dropCarried() {
     if (!this.carry) return false;
-    this.drop();
+    this.drop('manual');
     return true;
   }
   clearCarry({ dispose = false } = {}) {

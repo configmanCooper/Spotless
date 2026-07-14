@@ -133,7 +133,14 @@ export default function makeScene() {
         { name: 'floormap', clue: floormap, beat: 's5_step_floormap' },
         { name: 'alarm', after: ['floormap'], clue: desk, onAdvance: () => { this.artDisarmed = true; caseLight.material.color.setHex(0x3fbf6a); } },
         { name: 'hand', after: ['alarm'], clue: handMesh },
-        { name: 'panel', after: ['floormap'], clue: panelMesh, beat: 's5_step_panel', onAdvance: () => { this.panelOpen = true; panelMesh.visible = false; socketMesh.visible = true; grime.visible = true; } },
+        { name: 'panel', after: ['floormap'], clue: panelMesh, beat: 's5_step_panel', onAdvance: (a) => {
+          this.panelOpen = true; panelMesh.visible = false; socketMesh.visible = true; grime.visible = true;
+          a.openExamine({ title: 'Series-C service diagram', accent: '#8ab0ff', lines: [
+            'Three worn sockets, labelled in order.',
+            '1 — HAND. 2 — MEMORY RIBBON. 3 — FUSE.',
+            'The wear around the first socket is deepest. This machine was repaired in this order before.',
+          ] });
+        } },
         { name: 'socket', after: ['panel'], clue: grime },
         { name: 'ribbon', after: ['floormap'], clue: drawers, onAdvance: () => { ribbonMesh.visible = true; } },
         { name: 'crank', clue: crankMesh, beat: 's5_step_crank' },
@@ -146,7 +153,14 @@ export default function makeScene() {
       this._ch = ch;
 
       api.use({ id: 'floormap', mesh: floormap, pos: new THREE.Vector3(-10, 1.4, 7.4), reach: 1.9, prompt: 'read the floor map',
-        available: () => ch.ready('floormap'), onUse: () => ch.advance('floormap') });
+        available: () => ch.ready('floormap'), onUse: (a) => {
+          a.openExamine({ title: 'Museum floor map', accent: '#8ab0ff', lines: [
+            'The catalog lists eleven exhibits.',
+            'Exhibit 7 is an EARLY MANIPULATOR in the ART wing.',
+            'The curator asked for twelve. The unplaqued Series-C makes the count twelve only if someone has mistaken a person for an object.',
+          ] });
+          ch.advance('floormap');
+        } });
 
       api.use({ id: 'screwdriver', mesh: driver, pos: driver.position, reach: 1.8, pickable: true, dropY: 0.3, prompt: 'take the screwdriver' });
 
@@ -161,7 +175,12 @@ export default function makeScene() {
         onUse: (a) => {
           if (!this.artDisarmed) { a.audio.sfx('error'); a.narrator.say('s5_alarmed', { category: 'REACT' }); return; }
           const catchR = a.assist ? 2.6 : 4;   // Assist widens the guard window (plan §2)
-          if (this._guard.isNear(new THREE.Vector3(-9, 0, 6), catchR)) { a.audio.sfx('error'); a.narrator.say('s5_guardcaught', { category: 'VOICE' }); return; }
+          if (this._guard.isNear(new THREE.Vector3(-9, 0, 6), catchR)) {
+            a.audio.sfx('error'); a.narrator.say('s5_guardcaught', { category: 'VOICE' });
+            a.wrongTry('s5_guard', 's5_guard_nudge', { after: 2 });
+            return;
+          }
+          a.resetWrong('s5_guard');
           a.world.pickUp(this._handEnt); ch.advance('hand');
         },
       });
@@ -200,7 +219,9 @@ export default function makeScene() {
           if (item.id === 'hand' && ch.ready('inst_hand')) { a.audio.sfx('place'); ch.advance('inst_hand'); return true; }
           if (item.id === 'ribbon' && ch.ready('inst_ribbon')) { a.audio.sfx('place'); ch.advance('inst_ribbon'); return true; }
           if (item.id === 'fuse' && ch.ready('inst_fuse')) { a.audio.sfx('place'); ch.advance('inst_fuse'); return true; }
-          a.audio.sfx('error'); a.narrator.say('s5_wrongorder', { category: 'REACT' }); return false;
+          a.audio.sfx('error'); a.narrator.say('s5_wrongorder', { category: 'REACT' });
+          a.wrongTry('s5_order', 's5_order_nudge', { after: 2 });
+          return false;
         },
       });
 

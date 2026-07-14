@@ -62,6 +62,14 @@ export default function makeScene() {
         api.prop(P.labelPlaque(label, 0.46, 0.16, { bg: '#2a2622', fg: '#b7ad9e', edges: false }), x, 0.98, -6.66);
         this._checkLamps.push({ lamp, test, on: false });
       });
+      api.examine({ id: 'baycheck', mesh: checkPanel, pos: checkPanel.position, reach: 2.2, prompt: 'inspect the Bay 2 checklist',
+        available: () => !this._checkSeen,
+        onExamine: () => { this._checkSeen = true; },
+        title: 'Bay 2 verification', accent: '#9ad1c0', lines: [
+          'ID — a unit chip. WEIGHT — a full chassis. POWER — a charged device.',
+          'CODE — the barcode on the shell. PAPER — a stamped work order in the log.',
+          'Bay Two does not understand a person. It understands five green lights.',
+        ] });
 
       // refurb unit + chip, service card, bench grinder
       const shelf = P.box(2, 0.2, 0.8, 0x3a3a34); api.prop(shelf, 6, 1.4, 2);
@@ -122,7 +130,14 @@ export default function makeScene() {
       this._ch = ch;
 
       api.use({ id: 'poster', mesh: poster, pos: new THREE.Vector3(5.5, 1.8, -6.5), reach: 2.2, prompt: 'read: what SYNC does',
-        available: () => ch.ready('discover'), onUse: () => ch.advance('discover') });
+        available: () => ch.ready('discover'), onUse: (a) => {
+          a.openExamine({ title: 'SYNC service notice', accent: '#9ad1c0', lines: [
+            'SYNC restores factory state.',
+            'Personal settings, learned routes, and user memories are removed.',
+            'The cleared refurb on the shelf shows what the notice means by restored.',
+          ] });
+          ch.advance('discover');
+        } });
 
       this._chipEnt = api.use({ id: 'chip', mesh: chip, pos: chip.position, reach: 1.7, pickable: true, dropY: 1.6, ground: false,
         prompt: 'take the ID chip', available: () => ch.ready('chip') || (ch.done('chip') && !ch.done('chipin')),
@@ -192,11 +207,11 @@ export default function makeScene() {
         available: () => !api.solved,
         acceptCarry: (item, a) => {
           if (item.id !== 'vacuum') return false;
-          if (!this._vacEnt.hasChip) { a.audio.sfx('error'); a.narrator.say('s9_noid', { category: 'REACT' }); return false; }
-          if (this._vacEnt.ballast < 2) { a.audio.sfx('error'); a.narrator.say('s9_noweight', { category: 'REACT' }); return false; }
-          if (!this._vacEnt.charged) { a.audio.sfx('error'); a.narrator.say('s9_nopower', { category: 'REACT' }); return false; }
-          if (!this._vacEnt.hasBarcode) { a.audio.sfx('error'); a.narrator.say('s9_noid', { category: 'REACT' }); return false; }
-          if (!ch.done('paperwork')) { a.audio.sfx('error'); a.narrator.say('s9_nopaper', { category: 'REACT' }); return false; }
+          if (!this._vacEnt.hasChip) { a.audio.sfx('error'); a.narrator.say('s9_noid', { category: 'REACT' }); a.wrongTry('s9_bay_id', 's9_bay_nudge', { after: 2 }); return false; }
+          if (this._vacEnt.ballast < 2) { a.audio.sfx('error'); a.narrator.say('s9_noweight', { category: 'REACT' }); a.wrongTry('s9_bay_weight', 's9_bay_nudge', { after: 2 }); return false; }
+          if (!this._vacEnt.charged) { a.audio.sfx('error'); a.narrator.say('s9_nopower', { category: 'REACT' }); a.wrongTry('s9_bay_power', 's9_bay_nudge', { after: 2 }); return false; }
+          if (!this._vacEnt.hasBarcode) { a.audio.sfx('error'); a.narrator.say('s9_noid', { category: 'REACT' }); a.wrongTry('s9_bay_code', 's9_bay_nudge', { after: 2 }); return false; }
+          if (!ch.done('paperwork')) { a.audio.sfx('error'); a.narrator.say('s9_nopaper', { category: 'REACT' }); a.wrongTry('s9_bay_paper', 's9_bay_nudge', { after: 2 }); return false; }
           // success — leave the vacuum sitting on Bay 2 (visible), don't consume it
           const mesh = a.world.carry.mesh;
           a.world.rig.carryAnchor.remove(mesh); a.group.add(mesh);

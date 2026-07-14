@@ -120,13 +120,19 @@ export default function makeScene() {
       api.use({ id: 'cutoff', mesh: cutoff, pos: new THREE.Vector3(-4.6, 0.7, -12), reach: 2,
         prompt: () => 'crank the cutoff',
         available: () => ch.ready('cutoff'),
-        onUse: (a) => { if (a.world.carry && a.world.carry.entity.id === 'crank') { a.audio.sfx('unlock'); ch.advance('cutoff'); } else { a.audio.sfx('error'); a.narrator.say('s10_barehand', { category: 'REACT' }); } } });
+        onUse: (a) => {
+          if (a.world.carry && a.world.carry.entity.id === 'crank') { a.audio.sfx('unlock'); a.resetWrong('s10_crank'); ch.advance('cutoff'); }
+          else { a.audio.sfx('error'); a.narrator.say('s10_barehand', { category: 'REACT' }); a.wrongTry('s10_crank', 's10_crank_nudge', { after: 2 }); }
+        } });
 
       // bridge winch — same crank, kept
       api.use({ id: 'winch', mesh: winch, pos: new THREE.Vector3(3, 0.6, -28), reach: 2,
         prompt: 'wind the bridge down',
         available: () => ch.ready('bridge'),
-        onUse: (a) => { if (a.world.carry && a.world.carry.entity.id === 'crank') { a.audio.sfx('unlock'); ch.advance('bridge'); } else { a.audio.sfx('error'); a.narrator.say('s10_barehand', { category: 'REACT' }); } } });
+        onUse: (a) => {
+          if (a.world.carry && a.world.carry.entity.id === 'crank') { a.audio.sfx('unlock'); a.resetWrong('s10_crank'); ch.advance('bridge'); }
+          else { a.audio.sfx('error'); a.narrator.say('s10_barehand', { category: 'REACT' }); a.wrongTry('s10_crank', 's10_crank_nudge', { after: 2 }); }
+        } });
 
       api.world.setLampKnown(true);
       api.ui.setLampGlyph('known');

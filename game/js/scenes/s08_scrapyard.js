@@ -71,15 +71,55 @@ export default function makeScene() {
       // foreman board (tag) + LOTO poster + breaker
       const board = P.box(1, 1.2, 0.2, 0x3a352a); api.prop(board, 9, 0.9, -6); api.nav.addBox(9, -6, 1, 0.3);
       api.mountSign(board, 'LOCKOUT/TAGOUT\nTAG THE BREAKER', 0.9, 0.44, [0, 0.3, 0.12], { bg: '#c9433f', fg: '#fff' });
+      api.examine({ id: 'loto_poster', mesh: board, pos: board.position, reach: 2, prompt: 'read the lockout procedure',
+        available: () => !this._lotoSeen && !(this._ch && this._ch.ready('tag')),
+        onExamine: () => { this._lotoSeen = true; },
+        title: 'Lockout / tagout', accent: '#ffa64b', lines: [
+          'STOP the line. ISOLATE its backup power. TAG the breaker.',
+          'An emergency stop can spring back. A tagged, fuel-dead machine cannot.',
+          'The procedure exists because the next shift may not know what the last shift touched.',
+        ] });
       const breaker = P.box(0.6, 1, 0.3, 0x4a5560, { emissive: 0x0a1015 }); api.prop(breaker, 9, 0.6, -4); api.nav.addBox(9, -4, 0.6, 0.3);
 
       // walkway gate + heap dig + core + bell + chutes
       const gate = api.door(3, 4, 2.5, 0.3, 0x2a3a5a, 1.8);
       const redBin = P.items.bin(0xc9433f, false); api.prop(redBin, -6, 0.7, 3); api.nav.addBox(-6, 3, 1.4, 1.4); redBin.scale.set(1.6, 1.6, 1.6);
+      api.mountSign(redBin, 'CORES', 0.7, 0.18, [0, 0.65, 0], { bg: '#b53030', fg: '#fff' });
+      const metalBin = P.items.bin(0x6a6f76, false); api.prop(metalBin, -8.5, 0.55, 0.5); api.nav.addBox(-8.5, 0.5, 1, 1);
+      const plasticBin = P.items.bin(0x9a784a, false); api.prop(plasticBin, 8.5, 0.55, 0.5); api.nav.addBox(8.5, 0.5, 1, 1);
+      api.mountSign(metalBin, 'METALS', 0.7, 0.18, [0, 0.65, 0], { bg: '#555a60', fg: '#fff' });
+      api.mountSign(plasticBin, 'PLASTICS', 0.7, 0.18, [0, 0.65, 0], { bg: '#8a693a', fg: '#fff' });
       const blueChute = P.box(1.4, 1.4, 1.4, 0x4a7ac9, { emissive: 0x10203a }); api.prop(blueChute, 6, 0.7, 3); api.nav.addBox(6, 3, 1.4, 1.4);
       api.mountSign(blueChute, 'OUTBOUND\nEMPTY', 1.1, 0.36, [0, 0.55, 0.72], { bg: '#4a7ac9', fg: '#fff' });
       const bell = P.items.bell(0xc9a94a); api.prop(bell, 9, 1.0, 3); api.nav.addBox(9, 3, 0.5, 0.5);
       api.prop(P.labelPlaque('RING FOR\nPICKUP', 0.8, 0.4, { bg: '#3a3128', fg: '#ffd' }), 9, 1.6, 3);
+
+      // Optional assigned-work loop: one obvious example of each category can be
+      // sorted exactly as ordered. Completing it earns the hollow task-complete beat
+      // but never blocks or advances the real rescue chain.
+      this._sorted = new Set();
+      const addSortItem = (id, mesh, x, type) => {
+        api.prop(mesh, x, 0.45, 0.2);
+        api.use({ id, mesh, pos: mesh.position, reach: 1.6, pickable: true, dropY: 0.45,
+          prompt: `take the ${type} piece`, sortType: type, available: () => !this._sorted.has(type) });
+      };
+      addSortItem('sort_metal', P.items.gear(0x7a7f86, 8), -1.2, 'metal');
+      addSortItem('sort_plastic', P.box(0.35, 0.25, 0.3, 0xd08a4a), 0, 'plastic');
+      addSortItem('sort_core', P.items.core(0x55585c, false), 1.2, 'core');
+      const sorted = (type, a) => {
+        if (this._sorted.has(type)) return;
+        this._sorted.add(type);
+        a.audio.sfx('dump');
+        if (this._sorted.size === 3) a.fakeTaskDone();
+      };
+      const wrongSort = (expected, a) => {
+        a.audio.sfx('error');
+        a.narrator.line(`Not ${expected}. The sorting labels were painfully literal.`, { id: 's8_sortwrong_' + expected, category: 'REACT', cooldown: 4 });
+      };
+      api.use({ id: 'metalbin', mesh: metalBin, pos: metalBin.position, reach: 2, prompt: 'METALS — left',
+        acceptCarry: (item, a) => { if (item.sortType !== 'metal') { wrongSort('metal', a); return false; } sorted('metal', a); return true; } });
+      api.use({ id: 'plasticbin', mesh: plasticBin, pos: plasticBin.position, reach: 2, prompt: 'PLASTICS — right',
+        acceptCarry: (item, a) => { if (item.sortType !== 'plastic') { wrongSort('plastic', a); return false; } sorted('plastic', a); return true; } });
 
       const ch = api.chain([
         { name: 'estop', clue: estop, beat: 's8_step_estop', onAdvance: () => { this.beltStopped = true; this._restartT = this._restartDelay(); } },
@@ -108,8 +148,8 @@ export default function makeScene() {
         onUse: (a) => {
           const r = dlat.index, c = dlong.index;
           const hit = this._barrels.find(b => !b.cleared && b.r === r && b.c === c);
-          if (hit) { hit.cleared = true; hit.mesh.visible = false; a.audio.sfx('thunk'); if (this._barrels.every(b => b.cleared)) ch.advance('crane'); }
-          else a.narrator.line('The magnet clanged on empty concrete.', { id: 's8_cranemiss', category: 'REACT' });
+          if (hit) { hit.cleared = true; hit.mesh.visible = false; a.audio.sfx('thunk'); a.resetWrong('s8_crane'); if (this._barrels.every(b => b.cleared)) ch.advance('crane'); }
+          else { a.narrator.line('The magnet clanged on empty concrete.', { id: 's8_cranemiss', category: 'REACT' }); a.wrongTry('s8_crane', 's8_crane_nudge', { after: 3 }); }
         } });
 
       api.use({ id: 'fuelcutoff', mesh: cutoff, pos: new THREE.Vector3(-6.6, 0.5, 6), reach: 1.8, prompt: 'shut the fuel cutoff',
@@ -128,7 +168,14 @@ export default function makeScene() {
 
       api.use({ id: 'gate', mesh: gate, pos: new THREE.Vector3(3, 0.9, 4), reach: 1.9, prompt: 'open the walkway gate',
         available: () => !ch.done('gate'),
-        onUse: (a) => { if (!ch.ready('gate')) { a.audio.sfx('error'); a.narrator.say('s8_interlock2', { category: 'REACT' }); return; } gate.userData.open(); a.audio.sfx('unlock'); ch.advance('gate'); } });
+        onUse: (a) => {
+          if (!ch.ready('gate')) {
+            a.audio.sfx('error'); a.narrator.say('s8_interlock2', { category: 'REACT' });
+            a.wrongTry('s8_lockout', 's8_lockout_nudge', { after: 2 });
+            return;
+          }
+          a.resetWrong('s8_lockout'); gate.userData.open(); a.audio.sfx('unlock'); ch.advance('gate');
+        } });
 
       api.clean({ id: 'scrapheap', mesh: heap, pos: heap.position, reach: 1.7, cleanTime: 1.1, trashAmount: 0.02, removeOnClean: false,
         available: () => ch.ready('clearheap') && this._heapStage < 3,
@@ -143,7 +190,12 @@ export default function makeScene() {
         onUse: (a) => { this._shipWindow = this._shipDuration(); if (ch.ready('bell')) ch.advance('bell'); else a.narrator.say('s8_step_bell', { category: 'REACT' }); a.audio.sfx('unlock'); } });
 
       api.use({ id: 'redbin', mesh: redBin, pos: new THREE.Vector3(-6, 0.7, 3), reach: 2, prompt: 'RED BIN (compacts)',
-        acceptCarry: (item, a) => { a.audio.sfx('dump'); if (item.id === 'core') { setTimeout(() => { this._coreMesh.position.set(-2, 0.9, -3); a.group.add(this._coreMesh); this._coreEnt.carried = false; if (!a.interact.entities.includes(this._coreEnt)) a.interact.add(this._coreEnt); }, 700); a.narrator.line('The belt brought it round again.', { id: 's8_recover', category: 'REACT' }); } return true; } });
+        acceptCarry: (item, a) => {
+          if (item.sortType === 'core') { sorted('core', a); return true; }
+          a.audio.sfx('dump');
+          if (item.id === 'core') { setTimeout(() => { this._coreMesh.position.set(-2, 0.9, -3); a.group.add(this._coreMesh); this._coreEnt.carried = false; if (!a.interact.entities.includes(this._coreEnt)) a.interact.add(this._coreEnt); }, 700); a.narrator.line('The belt brought it round again.', { id: 's8_recover', category: 'REACT' }); }
+          return true;
+        } });
 
       api.use({ id: 'bluechute', mesh: blueChute, pos: new THREE.Vector3(6, 0.7, 3), reach: 2,
         prompt: () => this._shipWindow > 0 ? 'ship the core out' : 'OUTBOUND (sealed)',
