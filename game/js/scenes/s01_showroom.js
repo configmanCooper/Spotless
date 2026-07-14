@@ -23,7 +23,7 @@ export default function makeScene() {
     build(api) {
       this._t = 0; this._speedT = 0; this.hasKey = false; this.caseOpen = false;
       this._api = api;
-      api.floor(40, 0x1b2028);
+      api.floor(24, 0x1b2028);
       api.bounds(-9, 9, -12, 9);
       api.wall(0, -12, 20, 0.3, 0x2a323c);
       api.wall(-9, -1.5, 0.3, 21, 0x2a323c);

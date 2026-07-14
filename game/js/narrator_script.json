@@ -558,5 +558,6 @@
   "s6_bus": { "category": "VOICE", "speaker": "oldman", "once": true, "text": "Just waiting for the bus, he says, to no one in particular. | She's meeting me at the stop. | She's always a little late." },
   "neighbor_1": { "category": "VOICE", "speaker": "neighbor", "cooldown": 9, "text": "Bag those leaves before the storm, robot!" },
   "porchman_1": { "category": "VOICE", "speaker": "porchman", "cooldown": 9, "text": "Stay put, robot. Your lot are blind in the dark." },
+  "porchman_2": { "category": "VOICE", "speaker": "porchman", "once": true, "text": "Huh. | Suppose you found your way well enough." },
   "salesman_1": { "category": "VOICE", "speaker": "salesman", "cooldown": 7, "text": "Watch the Series-C handle THIS common kitchen accident!" }
 }

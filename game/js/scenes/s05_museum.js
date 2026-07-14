@@ -26,7 +26,7 @@ export default function makeScene() {
 
     build(api) {
       this.artDisarmed = false; this.panelOpen = false; this.lift = false;
-      api.floor(40, 0x1a1d2b);
+      api.floor(24, 0x1a1d2b);
       api.bounds(-11, 11, -9, 9);
       api.fx.motes({ count: 70, area: [20, 5, 16], center: [0, 2.4, -1], color: 0x9fb0d0, opacity: 0.22, size: 0.05 });
       api.wall(0, -9, 24, 0.3, 0x252838); api.wall(-11, 0, 0.3, 18, 0x252838); api.wall(11, 0, 0.3, 18, 0x252838);

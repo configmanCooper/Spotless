@@ -23,7 +23,9 @@ export default function makeScene() {
 
     build(api) {
       this._lampLit = false;
-      api.floor(60, 0x0c0d14);
+      const roadBase = P.box(16.4, 0.12, 48.4, 0x030409, { rough: 1, edges: false }); api.prop(roadBase, 0, -0.07, -17);
+      const roadFloor = new THREE.Mesh(new THREE.PlaneGeometry(16, 48), P.mat(0x0c0d14, { rough: 1 }));
+      roadFloor.rotation.x = -Math.PI / 2; api.prop(roadFloor, 0, 0, -17);
       api.bounds(-7, 7, -40, 6);
       api.setAmbient(0.22);
       api.world.lampDrains = true; api.world.lampBattery = 1;
@@ -88,7 +90,13 @@ export default function makeScene() {
         { name: 'mailkey', clue: mailbox, beat: 's10_step_mailkey' },
         { name: 'truckunlock', after: ['mailkey'], clue: truck },
         { name: 'crank', after: ['truckunlock'], clue: truck, beat: 's10_step_crank' },
-        { name: 'cutoff', after: ['crank', 'lamp'], clue: cutoff, beat: 's10_cut', onAdvance: () => { this._barrier.userData.open(); this._spark.material.opacity = 0; } },
+        { name: 'cutoff', after: ['crank', 'lamp'], clue: cutoff, onAdvance: (a) => {
+          this._barrier.userData.open(); this._spark.material.opacity = 0;
+          a.narrator.saySequence([
+            { id: 's10_cut', opts: { category: 'STORY' } },
+            { id: 'porchman_2', opts: { category: 'VOICE' } },
+          ]);
+        } },
         { name: 'bridge', after: ['cutoff'], clue: winch, beat: 's10_step_bridge', onAdvance: () => { this._bridge.userData.open(); } },
         { name: 'cross', after: ['bridge'], clue: null },
       ]);

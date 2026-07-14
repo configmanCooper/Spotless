@@ -26,7 +26,7 @@ export default function makeScene() {
     build(api) {
       this.closetOpen = false; this.tickSustained = false; this.vaultOpen = false;
       this._fluffed = 0; this._code = [0, 0, 0, 0]; this.CODE = [0, 3, 0, 3]; // MARCH 3 -> 03 03
-      api.floor(34, 0x2a2620);
+      api.floor(22, 0x2a2620);
       api.bounds(-9, 9, -8, 8);
       api.wall(0, -8, 20, 0.3, 0x3a352a); api.wall(-9, 0, 0.3, 16, 0x3a352a); api.wall(9, 0, 0.3, 16, 0x3a352a);
       const door = api.wall(0, 8, 4, 0.3, 0x4a4436);
@@ -54,7 +54,17 @@ export default function makeScene() {
       // curtained windows on the side walls (immaculate, still drawn after six years)
       for (const sx of [-1, 1]) { api.prop(P.box(0.1, 1.6, 1.6, 0x8a94a0, { rough: 0.7 }), sx * 8.85, 1.4, -3); api.prop(P.box(0.14, 1.7, 0.3, 0x5a6472), sx * 8.8, 1.5, -3.8); api.prop(P.box(0.14, 1.7, 0.3, 0x5a6472), sx * 8.8, 1.5, -2.2); }
       // dormant household screens (dark wall panels) + green smart-status dots
-      for (const [sx, sz] of [[-8.85, 4], [8.85, 4]]) { api.prop(P.box(0.06, 0.8, 1.2, 0x101216, { emissive: 0x0a1416, emissiveIntensity: 0.3, edges: false }), sx, 1.6, sz); }
+      this._homeScreens = [];
+      for (const [sx, sz] of [[-8.85, 4], [8.85, 4]]) {
+        const screen = P.box(0.06, 0.8, 1.2, 0x101216, { emissive: 0x0a1416, emissiveIntensity: 0.3, edges: false });
+        screen.material = screen.material.clone();
+        screen.material.userData.shared = false;
+        api.prop(screen, sx, 1.6, sz); this._homeScreens.push(screen);
+        for (let y = -0.25; y <= 0.25; y += 0.17) {
+          const scan = P.box(0.065, 0.025, 1.05, 0x16343a, { emissive: 0x16343a, emissiveIntensity: 0.35, edges: false });
+          api.prop(scan, sx + (sx < 0 ? 0.035 : -0.035), 1.6 + y, sz);
+        }
+      }
       this._smartDots = [];
       for (const [dx, dy, dz] of [[-8.8, 2.4, 4], [8.8, 2.4, 4], [0, 2.6, -7.8]]) { const dot = P.box(0.07, 0.07, 0.05, 0x14301a, { emissive: 0x2abf5a, emissiveIntensity: 0.8, edges: false }); api.prop(dot, dx, dy, dz); this._smartDots.push(dot); }
       // an air vent with slats that breathe
@@ -214,6 +224,12 @@ export default function makeScene() {
       if (this._ventLouvers && !api.world.reducedMotion) {
         this._vt = (this._vt || 0) + dt;
         this._ventLouvers.forEach((lv, i) => { lv.scale.y = 1 + Math.sin(this._vt * 1.5 + i * 0.6) * 0.3; });
+      }
+      if (this._homeScreens) {
+        this._screenT = (this._screenT || 0) + dt;
+        this._homeScreens.forEach((screen, i) => {
+          screen.material.emissiveIntensity = api.world.reducedMotion ? 0.3 : 0.2 + (Math.sin(this._screenT * 1.2 + i) * 0.5 + 0.5) * 0.22;
+        });
       }
     },
   };

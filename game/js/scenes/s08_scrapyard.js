@@ -29,7 +29,7 @@ export default function makeScene() {
       this._api = api;
       // barrels on grid cells [row,col]; crane must drop on each
       this._barrels = [{ r: 1, c: 1, mesh: null }, { r: 2, c: 0, mesh: null }];
-      api.floor(40, 0x241d16);
+      api.floor(24, 0x241d16);
       api.bounds(-11, 11, -9, 9);
       api.wall(0, -9, 24, 0.3, 0x33291c);
 
@@ -56,6 +56,7 @@ export default function makeScene() {
       // barrels sit on a painted grid — row letters down one side, column numbers along
       // the other, so you can read each barrel's cell straight off the floor
       const gridOX = -6.6, gridOZ = 6, cell = 0.7;
+      this._grid = { x: gridOX, z: gridOZ, cell };
       const floorTile = (txt, x, z) => { const t = P.labelPlaque(txt, 0.34, 0.34, { bg: '#2a2318', fg: '#ffc46a' }); t.rotation.x = -Math.PI / 2; t.userData._noTilt = true; api.prop(t, x, 0.03, z); };
       // faint grid squares
       for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) { const sq = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.6), new THREE.MeshBasicMaterial({ color: 0x4a3f2a, transparent: true, opacity: 0.25 })); sq.rotation.x = -Math.PI / 2; api.prop(sq, gridOX + c * cell, 0.02, gridOZ + r * cell - 1); }
@@ -67,6 +68,13 @@ export default function makeScene() {
       // crane cab: two dials + drop; board key hangs here
       const cab = P.box(1.2, 1.4, 1.2, 0x5a5040); api.prop(cab, 6, 0.7, 6); api.nav.addBox(6, 6, 1.2, 1.2);
       api.mountSign(cab, 'CRANE CAB', 0.8, 0.18, [0, 0.55, 0.62], { bg: '#5a5040', fg: '#e8dcc0' });
+      // Full crane silhouette: mast, boom, cable, and magnet visibly track the
+      // painted loading grid as the two cab dials move.
+      api.prop(P.box(0.3, 4.8, 0.3, 0x4a4438, { metal: 0.4 }), 6, 3.1, 6);
+      api.prop(P.box(13.5, 0.22, 0.22, 0x5a5040, { metal: 0.4 }), -0.6, 5.25, 6);
+      this._craneCable = P.box(0.07, 4.1, 0.07, 0x22201c, { metal: 0.5, edges: false }); api.prop(this._craneCable, -6.6, 3.0, 5);
+      this._craneHead = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.16, 16), P.mat(0x303238, { metal: 0.7 })); api.prop(this._craneHead, -6.6, 0.9, 5);
+      this._weldLight = new THREE.PointLight(0xff8a38, 0.8, 5, 1.8); this._weldLight.position.set(-8, 1.4, 6); api.group.add(this._weldLight);
 
       // foreman board (tag) + LOTO poster + breaker
       const board = P.box(1, 1.2, 0.2, 0x3a352a); api.prop(board, 9, 0.9, -6); api.nav.addBox(9, -6, 1, 0.3);
@@ -232,6 +240,18 @@ export default function makeScene() {
         if (this._restartT <= 0) { this._restartT = this._restartDelay(); this.beltStopped = false; api.narrator.say('s8_restart', { category: 'VOICE' }); }
       }
       if (this._shipWindow > 0) this._shipWindow -= dt;
+      if (this._dlat && this._dlong && this._craneHead) {
+        const tx = this._grid.x + this._dlong.index * this._grid.cell;
+        const tz = this._grid.z + this._dlat.index * this._grid.cell - 1;
+        this._craneHead.position.x += (tx - this._craneHead.position.x) * Math.min(1, dt * 5);
+        this._craneHead.position.z += (tz - this._craneHead.position.z) * Math.min(1, dt * 5);
+        this._craneCable.position.x = this._craneHead.position.x;
+        this._craneCable.position.z = this._craneHead.position.z;
+      }
+      if (this._weldLight) {
+        this._weldT = (this._weldT || 0) + dt;
+        this._weldLight.intensity = api.world.reducedMotion ? 0.55 : 0.35 + Math.max(0, Math.sin(this._weldT * 11)) * 1.2;
+      }
     },
 
     _restartDelay() { return this._api && this._api.assist ? 30 : 20; },

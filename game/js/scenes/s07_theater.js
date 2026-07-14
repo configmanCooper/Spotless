@@ -26,7 +26,7 @@ export default function makeScene() {
     build(api) {
       this._t = 0; this.hasA = false; this.hasB = false; this.spotOn = false; this.battenUp = false;
       this._api = api;
-      api.floor(40, 0x171015);
+      api.floor(24, 0x171015);
       api.bounds(-11, 11, -9, 9);
       api.wall(0, -9, 24, 0.3, 0x241820); api.wall(-11, 0, 0.3, 18, 0x241820); api.wall(11, 0, 0.3, 18, 0x241820);
 
@@ -62,6 +62,7 @@ export default function makeScene() {
       // fly rope wall — each line is colour-tagged; the batten blocking the ladder
       // wears the same colour as the rope that raises it (a match, not a number).
       const ropeCols = [0xd94040, 0x4a7ac9, 0x3fae5a, 0xe0a83a]; // red, blue, GREEN(correct), amber
+      const ropeMarks = ['●', '■', '▲', '◆'];
       const CORRECT = 2;
       const flySign = P.labelPlaque('FLY RAIL', 0.7, 0.24, { bg: '#241820', fg: '#d9435b' }); api.prop(flySign, -8.2, 2.2, -8.7);
       api.examine({ id: 'flyplot', mesh: flySign, pos: flySign.position, reach: 2.1, prompt: 'examine the fly plot',
@@ -77,6 +78,7 @@ export default function makeScene() {
         const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 3, 6), P.mat(0x8a7a4a));
         api.prop(rope, -9 + i * 0.5, 1.5, -8);
         const band = P.box(0.09, 0.16, 0.09, ropeCols[i], { emissive: ropeCols[i], emissiveIntensity: 0.25 }); band.position.set(-9 + i * 0.5, 1.1, -8); api.group.add(band);
+        const tag = P.labelPlaque(`${i + 1} ${ropeMarks[i]}`, 0.32, 0.16, { bg: '#241820', fg: '#f0d8c0', frame: false }); api.prop(tag, -9 + i * 0.5, 0.68, -7.92);
         api.use({ id: 'rope_' + i, mesh: rope, pos: new THREE.Vector3(-9 + i * 0.5, 1.5, -8), reach: 1.7, effect: ropeEffects[i],
           prompt: 'pull this line', available: () => this._ch.ready('rope') && !this.battenUp,
           onUse: (a, e) => {
@@ -89,6 +91,7 @@ export default function makeScene() {
       const ladder = P.box(0.4, 3, 0.4, 0x5a5a5a); api.prop(ladder, -9, 1.5, 6);
       // the lowered LX (lighting) batten across the ladder — painted the CORRECT colour
       const batten = P.box(2.4, 0.14, 0.14, ropeCols[CORRECT], { emissive: ropeCols[CORRECT], emissiveIntensity: 0.3 }); api.prop(batten, -9, 1.1, 6); this._batten = batten;
+      api.prop(P.labelPlaque('3 ▲', 0.44, 0.16, { bg: '#203025', fg: '#d8f0d8' }), -9, 1.34, 6);
       const bulbBox = P.box(0.6, 0.4, 0.6, 0x4a4a52); api.prop(bulbBox, -9, 3.2, 6);
       const bulbMesh = P.items.lightbulb(0xf0e0a0); bulbMesh.visible = false; api.prop(bulbMesh, -9, 3.5, 6); this._bulbMesh = bulbMesh;
 

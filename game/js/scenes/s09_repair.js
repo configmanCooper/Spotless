@@ -32,7 +32,7 @@ export default function makeScene() {
 
     build(api) {
       this.bay1Fused = false; this.cageOpen = false;
-      api.floor(36, 0x1c2320);
+      api.floor(24, 0x1c2320);
       api.bounds(-11, 11, -8, 8);
       api.fx.motes({ count: 60, area: [20, 5, 14], center: [0, 2.3, 0], color: 0xbfe0d4, opacity: 0.18, size: 0.05 });
       api.wall(0, -8, 24, 0.3, 0x2a322e); api.wall(-11, 0, 0.3, 16, 0x2a322e); api.wall(11, 0, 0.3, 16, 0x2a322e);

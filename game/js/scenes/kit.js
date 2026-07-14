@@ -138,7 +138,11 @@ export function createApi(core, group, onSolve) {
       };
       return m;
     },
-    floor(size, hex) { const f = P.ground(size, hex); group.add(f); return f; },
+    floor(size, hex) {
+      const base = P.box(size + 0.35, 0.12, size + 0.35, 0x08080c, { rough: 1, edges: false });
+      base.position.y = -0.07; group.add(base);
+      const f = P.ground(size, hex); group.add(f); return f;
+    },
     bounds(minX, maxX, minZ, maxZ) { api.nav.setBounds({ minX, maxX, minZ, maxZ }); },
 
     // ---- interaction registration ----

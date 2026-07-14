@@ -22,6 +22,7 @@ export default function makeScene() {
     build(api) {
       this._phase = 'climb';
       this._revealStage = null;
+      const towerBase = P.box(12.4, 0.12, 56.4, 0x05060a, { rough: 1, edges: false }); api.prop(towerBase, 0, -0.07, 20);
       const towerFloor = new THREE.Mesh(new THREE.PlaneGeometry(12, 56), P.mat(0x14161f, { rough: 1 }));
       towerFloor.rotation.x = -Math.PI / 2; api.prop(towerFloor, 0, 0, 20);
       api.bounds(-6, 6, -6, 46);

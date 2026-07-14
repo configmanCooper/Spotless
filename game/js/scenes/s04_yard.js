@@ -12,7 +12,7 @@ export default function makeScene() {
     hints: ['s4_h1', 's4_h2', 's4_h3'],
 
     build(api) {
-      api.floor(40, 0x28301f);
+      api.floor(18, 0x28301f);
       api.bounds(-8, 8, -8, 8);
       api.fx.motes({ count: 40, area: [16, 5, 16], center: [0, 3, 0], color: 0xcaa060, opacity: 0.14, size: 0.05 });
       // the tree (the canopy sways in the wind and calms as Dust stands still)

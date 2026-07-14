@@ -23,7 +23,7 @@ export default function makeScene() {
 
     build(api) {
       this.hasKey = false; this.routerMail = false; this._carbon = false; this._shredStage = 0;
-      api.floor(34, 0x232019);
+      api.floor(22, 0x232019);
       api.bounds(-9, 9, -8, 8);
       api.wall(0, -8, 20, 0.3, 0x33301f); api.wall(-9, 0, 0.3, 16, 0x33301f);
       api.wall(9, 0, 0.3, 16, 0x33301f); api.wall(0, 8, 20, 0.3, 0x33301f);

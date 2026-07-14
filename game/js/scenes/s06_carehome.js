@@ -18,7 +18,7 @@ export default function makeScene() {
 
     build(api) {
       this.canSee = false;
-      api.floor(32, 0x2b241f);
+      api.floor(22, 0x2b241f);
       api.bounds(-9, 11, -8, 8);
       api.wall(0, -8, 20, 0.3, 0x3a322a); api.wall(-9, 0, 0.3, 16, 0x3a322a);
       api.wall(4, -3.5, 0.3, 7, 0x3a322a); api.wall(4, 4.5, 0.3, 3, 0x3a322a);

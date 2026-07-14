@@ -22,6 +22,11 @@ export default function makeScene() {
       // a night road that recedes into the dark, with a lone streetlamp — no prompt
       // ever points here, but futility slowly makes its pool of light more inviting
       const farRoad = P.box(6, 0.02, 16, 0x2a2732); api.prop(farRoad, 0, 0.009, -20);
+      // A quiet house across the road keeps the exterior from falling into empty
+      // void while preserving the lone-road invitation.
+      api.prop(P.box(4.2, 2.8, 3.2, 0x25232c), 5.2, 1.4, -18);
+      const farRoof = new THREE.Mesh(new THREE.ConeGeometry(3.0, 1.4, 4), P.mat(0x1d1c24)); farRoof.rotation.y = Math.PI / 4; api.prop(farRoof, 5.2, 3.5, -18);
+      api.prop(P.box(0.7, 0.8, 0.06, 0x302820, { emissive: 0x8a682e, emissiveIntensity: 0.35, edges: false }), 3.08, 1.6, -18);
       const lampPost = P.box(0.16, 4, 0.16, 0x23212a); api.prop(lampPost, -3.5, 2, -10.5);
       const lampHead = P.box(0.5, 0.24, 0.5, 0x14141a, { emissive: 0xbfd0ff, emissiveIntensity: 0.6, edges: false }); api.prop(lampHead, -3.5, 3.9, -10.5);
       this._streetLight = new THREE.PointLight(0xbfd0ff, 1.4, 10, 1.4); this._streetLight.position.set(-3.5, 3.6, -10.5); api.group.add(this._streetLight);
