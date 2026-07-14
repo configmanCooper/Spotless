@@ -104,6 +104,28 @@ html,body{ margin:0; height:100%; background:#0d0b14; overflow:hidden; }
   border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:10px 14px;
   font:12px/1.5 ui-monospace,monospace; color:var(--dim); white-space:pre; display:none; }
 #debug.show{ display:block; }
+#debug.with-solutions{ top:auto; bottom:10px; max-height:150px; overflow-y:auto; }
+#solution-debug{ position:absolute; right:10px; top:10px; width:min(380px,42vw);
+  max-height:calc(100vh - 20px); overflow-y:auto; display:none; pointer-events:auto;
+  background:rgba(10,11,16,.94); border:1px solid rgba(255,255,255,.18);
+  border-radius:10px; padding:12px; color:var(--ink); box-shadow:0 12px 40px rgba(0,0,0,.5);
+  font:12px/1.35 "Segoe UI",system-ui,sans-serif; z-index:20; }
+#solution-debug.show{ display:block; }
+#solution-debug.with-playtest{ max-height:calc(100vh - 180px); }
+.solution-debug-head{ display:flex; justify-content:space-between; align-items:center;
+  gap:12px; color:var(--scene-accent,#7fd7ff); font-size:14px; }
+.solution-debug-sub{ margin:3px 0 10px; color:#e8a06f; font-size:10px;
+  letter-spacing:.13em; }
+.solution-debug-steps{ display:flex; flex-direction:column; gap:5px; }
+.solution-step{ display:flex; align-items:flex-start; gap:8px; padding:6px 7px;
+  border-left:2px solid transparent; border-radius:5px; color:#d8d2c8; }
+.solution-step input{ margin:2px 0 0; accent-color:#62cf86; flex:0 0 auto; }
+.solution-step.done{ color:#8a928c; text-decoration:line-through; opacity:.78; }
+.solution-step.current{ border-left-color:var(--scene-accent,#7fd7ff);
+  background:rgba(127,215,255,.08); color:#fff; }
+@media (max-width:760px) {
+  #solution-debug{ width:min(360px,72vw); font-size:11px; }
+}
 
 /* credits */
 #credits{ position:absolute; inset:0; display:none; overflow:hidden; }

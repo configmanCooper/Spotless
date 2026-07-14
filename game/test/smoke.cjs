@@ -64,7 +64,7 @@ function serve() {
 
     // let the exit line finish + read buffer + fade + advance to S1 (poll)
     let advanced = null;
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 45; i++) {
       await page.waitForTimeout(1000);
       advanced = await page.evaluate(() => window.__SPOTLESS.scene && window.__SPOTLESS.scene.id);
       if (advanced === 's01_showroom') break;

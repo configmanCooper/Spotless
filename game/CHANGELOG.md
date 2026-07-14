@@ -1,5 +1,13 @@
 # SPOTLESS — Changelog
 
+## v4 — Solution Debug Checklist
+
+- Added `?debug=1`, a scrollable upper-right real-solution checklist.
+- Added human-readable solution steps for all twelve scenes.
+- Checkboxes update live from each scene's chain state.
+- The current available step is highlighted.
+- Added real-browser coverage for short and long debug checklists.
+
 ## v3 — Master Improvement Pass
 
 ### Correctness and lifecycle

@@ -27,7 +27,7 @@ class Game {
     this.audio = new Audio();
     this.debug = new Debug();
     this.ui = new UI(document.getElementById('ui-root'), this);
-    this.debug.attach(this.ui.debugEl);
+    this.debug.attach(this.ui.debugEl, this.ui.solutionDebugEl);
 
     // load save + narrator script
     this.save = (await import('./save.js'));
@@ -381,6 +381,7 @@ class Game {
     this.renderer.tickExposure(dt);
     this.renderer.render();
     if (this.debug.on) this._budgetHUD();
+    if (this.debug.solutionOn) this.debug.updateSolution(this.scene, this.api);
   }
 
   _budgetHUD() {

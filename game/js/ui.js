@@ -34,6 +34,7 @@ export class UI {
       </div>
       <div id="fade"></div>
       <div id="debug"></div>
+      <div id="solution-debug"></div>
       <div id="title" class="screen"></div>
       <div id="pause" class="screen hidden"></div>
       <div id="examine" class="screen hidden"></div>
@@ -49,6 +50,7 @@ export class UI {
     this.cleanring = this.$('#cleanring'); this.cleanarc = this.$('#cleanarc');
     this.toastEl = this.$('#toast'); this.fadeEl = this.$('#fade');
     this.debugEl = this.$('#debug');
+    this.solutionDebugEl = this.$('#solution-debug');
     this.titleEl = this.$('#title'); this.pauseEl = this.$('#pause'); this.creditsEl = this.$('#credits');
     this.examineEl = this.$('#examine');
     this.touchEl = this.$('#touch-controls');
