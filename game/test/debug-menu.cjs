@@ -35,13 +35,33 @@ function serve() {
     assert('debug=1 shows Party real-solution checklist', await page.evaluate(() => {
       const el = document.querySelector('#solution-debug');
       return el.classList.contains('show') && el.textContent.includes('The Party')
-        && el.querySelectorAll('.solution-step').length === 1;
+        && el.querySelectorAll('.solution-step').length === 1
+        && el.querySelector('[data-scene-skip="-1"]').disabled
+        && !el.querySelector('[data-scene-skip="1"]').disabled;
     }));
 
-    await page.evaluate(() => window.__SPOTLESS.loadScene('s01_showroom'));
-    await page.waitForTimeout(150);
+    await page.click('[data-scene-skip="1"]');
+    await page.waitForTimeout(200);
+    assert('Next Scene button advances without changing normal Continue scene', await page.evaluate(() => {
+      const g = window.__SPOTLESS;
+      return g.scene.id === 's01_showroom' && g.state.scene === 's00_party';
+    }));
     assert('Showroom checklist contains all six real steps', await page.evaluate(() =>
       document.querySelectorAll('#solution-debug .solution-step').length === 6));
+    await page.click('[data-scene-skip="-1"]');
+    await page.waitForTimeout(200);
+    assert('Previous Scene button returns to the prior scene', await page.evaluate(() =>
+      window.__SPOTLESS.scene.id === 's00_party'));
+    await page.click('[data-scene-skip="1"]');
+    await page.waitForTimeout(200);
+    await page.evaluate(() => window.__SPOTLESS._examine({ title: 'Old scene clue', lines: ['Temporary overlay.'] }));
+    await page.click('[data-scene-skip="1"]');
+    await page.waitForTimeout(200);
+    assert('debug skip closes a stale Examine overlay', await page.evaluate(() =>
+      window.__SPOTLESS.scene.id === 's02_office'
+      && document.querySelector('#examine').classList.contains('hidden')));
+    await page.click('[data-scene-skip="-1"]');
+    await page.waitForTimeout(200);
     await page.evaluate(() => {
       const g = window.__SPOTLESS;
       g.api._chain.advance('staffkey', { silent: true });
@@ -60,6 +80,8 @@ function serve() {
         && getComputedStyle(el).overflowY === 'auto'
         && el.scrollHeight > el.clientHeight;
     }));
+    assert('Next Scene is disabled on the final scene', await page.evaluate(() =>
+      document.querySelector('#solution-debug [data-scene-skip="1"]').disabled));
     assert('solution and playtest panels do not overlap', await page.evaluate(() => {
       const solution = document.querySelector('#solution-debug').getBoundingClientRect();
       const telemetry = document.querySelector('#debug').getBoundingClientRect();

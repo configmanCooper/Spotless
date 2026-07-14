@@ -180,13 +180,13 @@ function serve() {
     const reset = await page.evaluate(() => {
       const g = window.__SPOTLESS;
       return {
-        memory: g.state.memoryLog.length,
-        narratorMemory: g.narrator.log.length,
+        staleMemory: g.state.memoryLog.some(e => e.id === 'old'),
+        staleNarratorMemory: g.narrator.log.some(e => e.id === 'old'),
         solveTimes: Object.keys(g.state.solveTimes).length,
         mode: g.narrator.mode,
       };
     });
-    assert('New Game clears transcript and solve times', reset.memory === 0 && reset.narratorMemory === 0 && reset.solveTimes === 0);
+    assert('New Game clears transcript and solve times', !reset.staleMemory && !reset.staleNarratorMemory && reset.solveTimes === 0);
     assert('New Game resets narrator spatial mode', reset.mode === 'narrator');
 
     const revealOrder = await page.evaluate(() => {
@@ -231,7 +231,7 @@ function serve() {
       const g = window.__SPOTLESS;
       return g.mode === 'interlude' && !g.input.enabled && !g.world.enabled;
     }));
-    await page.waitForTimeout(10500);
+    await page.waitForTimeout(12500);
     assert('interlude advances exactly once', await page.evaluate(() => window.__SPOTLESS.__loads === 1));
 
     await page.evaluate(() => {

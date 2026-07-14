@@ -128,9 +128,10 @@ http://localhost:8131/index.html?debug=1
 
 The upper-right panel lists the complete real solution for the current scene.
 Steps check themselves as their chain flags complete, and the next active step
-is highlighted. The panel is scrollable for long scenes such as the
-lighthouse. This mode contains full puzzle spoilers and is intended for
-development and testing.
+is highlighted. Previous Scene and Next Scene buttons jump through the full
+scene order without replacing the normal Continue checkpoint. The panel is
+scrollable for long scenes such as the lighthouse. This mode contains full
+puzzle spoilers and is intended for development and testing.
 
 ## Layout
 

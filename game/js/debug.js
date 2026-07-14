@@ -142,6 +142,12 @@ export class Debug {
     this.el = null;
     this.solutionEl = null;
     this._solutionSignature = '';
+    this.sceneOrder = [];
+    this.onSceneSkip = null;
+  }
+  setSceneNavigator(order, onSkip) {
+    this.sceneOrder = Array.isArray(order) ? order.slice() : [];
+    this.onSceneSkip = onSkip || null;
   }
   attach(el, solutionEl) {
     this.el = el;
@@ -202,7 +208,8 @@ export class Debug {
       return false;
     });
     const current = chain ? chain.current() : null;
-    const signature = `${scene.id}|${states.map(v => v ? 1 : 0).join('')}|${current || ''}`;
+    const sceneIndex = this.sceneOrder.indexOf(scene.id);
+    const signature = `${scene.id}|${states.map(v => v ? 1 : 0).join('')}|${current || ''}|${sceneIndex}`;
     if (signature === this._solutionSignature) return;
     this._solutionSignature = signature;
     const done = states.filter(Boolean).length;
@@ -213,6 +220,10 @@ export class Debug {
         <span>${done} / ${defs.length}</span>
       </div>
       <div class="solution-debug-sub">REAL SOLUTION — SPOILERS</div>
+      <div class="solution-debug-nav">
+        <button data-scene-skip="-1" ${sceneIndex <= 0 ? 'disabled' : ''}>← Previous scene</button>
+        <button data-scene-skip="1" ${sceneIndex < 0 || sceneIndex >= this.sceneOrder.length - 1 ? 'disabled' : ''}>Next scene →</button>
+      </div>
       <div class="solution-debug-steps">
         ${defs.map(([key, label], i) => `
           <label class="solution-step ${states[i] ? 'done' : ''} ${!states[i] && key === current ? 'current' : ''}">
@@ -220,5 +231,10 @@ export class Debug {
             <span>${esc(label)}</span>
           </label>`).join('')}
       </div>`;
+    this.solutionEl.querySelectorAll('[data-scene-skip]').forEach(button => {
+      button.onclick = () => {
+        if (!button.disabled && this.onSceneSkip) this.onSceneSkip(Number(button.dataset.sceneSkip));
+      };
+    });
   }
 }

@@ -28,6 +28,7 @@ class Game {
     this.debug = new Debug();
     this.ui = new UI(document.getElementById('ui-root'), this);
     this.debug.attach(this.ui.debugEl, this.ui.solutionDebugEl);
+    this.debug.setSceneNavigator(SCENES.map(s => s.id), (delta) => this._debugSkipScene(delta));
 
     // load save + narrator script
     this.save = (await import('./save.js'));
@@ -163,7 +164,7 @@ class Game {
     this.loadScene(id);
   }
 
-  loadScene(id) {
+  loadScene(id, opts = {}) {
     // tear down previous — remove AND dispose GPU resources (plan §3: disposal)
     this._teardownScene();
     this.narrator.reset();
@@ -180,7 +181,7 @@ class Game {
     this.group = new THREE.Group();
     this.renderer.scene.add(this.group);
     this.scene = makeSceneById(id);
-    this.state.scene = id; this.save.save(this.state);
+    if (opts.persist !== false) { this.state.scene = id; this.save.save(this.state); }
     this.narrator.setScene(id);
 
     const core = {
@@ -221,7 +222,7 @@ class Game {
     this.hints.begin(this.scene.hints || [], (on) => { this.api.setShimmer(on); }, scale);
     if (this.api._firstStep) this.hints.setPool(this.api._firstStep);
     // restore a mid-scene checkpoint if one exists for this scene (plan §2)
-    const cp = this.state.checkpoint;
+    const cp = opts.restore === false ? null : this.state.checkpoint;
     if (cp && cp.scene === id && typeof this.scene.restoreCheckpoint === 'function') {
       try { this.scene.restoreCheckpoint(this.api, cp); this.api._telemetry.reloads++; } catch (e) { console.warn('checkpoint restore failed', e); }
     }
@@ -229,6 +230,19 @@ class Game {
     this._solveHandled = false; this._solveClock = 0;
     this.mode = 'play';
     this.ui.fade(false);
+  }
+
+  _debugSkipScene(delta) {
+    if (!this.debug.solutionOn || !this.scene) return;
+    const idx = SCENE_INDEX[this.scene.id];
+    const next = SCENES[idx + delta];
+    if (!next) return;
+    this.ui.hideExamine();
+    this.ui.hidePause();
+    this.mode = 'play';
+    this.input.reset();
+    this.input.enabled = true;
+    this.loadScene(next.id, { persist: false, restore: false });
   }
 
   _telemetryRecord() {

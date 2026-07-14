@@ -1,5 +1,12 @@
 # SPOTLESS — Changelog
 
+## v6 — Debug Scene Navigation
+
+- Added Previous Scene and Next Scene buttons to the `?debug=1` solution panel.
+- Debug scene jumps do not overwrite the normal Continue scene or restore an
+  unrelated checkpoint.
+- Added browser coverage for both navigation directions and boundary states.
+
 ## v5 — Showroom Backstage Enclosure
 
 - Enclosed the showroom breaker and mess dispenser behind a continuous
