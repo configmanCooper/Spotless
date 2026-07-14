@@ -113,6 +113,14 @@ export function createApi(core, group, onSolve) {
 
     // ---- geometry helpers ----
     prop(mesh, x = 0, y = 0, z = 0) { mesh.position.set(x, y, z); group.add(mesh); return mesh; },
+    // Fixed-world shadow for static props. Moving/hiding callers must update the
+    // returned mesh alongside their subject (see S8 barrels).
+    groundShadow(x, z, radius = 0.6, opacity = 0.45) {
+      const s = P.contactShadow(radius, opacity);
+      s.position.set(x, 0.015, z);
+      group.add(s);
+      return s;
+    },
     wall(cx, cz, w, d, hex, h = 1.6) {
       const m = P.box(w, h, d, hex, { rough: 1 });
       m.position.set(cx, h / 2, cz);
@@ -164,6 +172,24 @@ export function createApi(core, group, onSolve) {
 
     // ---- per-frame updaters (patrollers etc.) ----
     everyFrame(fn) { api._updaters.push(fn); return fn; },
+    npcIdle(mesh, opts = {}) {
+      if (!mesh) return mesh;
+      const phase = opts.phase ?? Math.random() * Math.PI * 2;
+      const sway = opts.sway ?? 0.025;
+      const head = mesh.children && mesh.children[1];
+      let time = phase;
+      api.everyFrame((dt) => {
+        if (!mesh.visible || (api.world && api.world.reducedMotion)) {
+          mesh.rotation.z = 0;
+          if (head) head.rotation.y = 0;
+          return;
+        }
+        time += dt;
+        mesh.rotation.z = Math.sin(time * 0.75) * sway;
+        if (head) head.rotation.y = Math.sin(time * 0.43) * (opts.head ?? 0.12);
+      });
+      return mesh;
+    },
 
     // ---- shimmer mercy-hint (§3.2): pulse the CURRENT step's clue object ----
     _setStepClue(mesh) {

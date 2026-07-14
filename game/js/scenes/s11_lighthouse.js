@@ -8,7 +8,7 @@ import { THREE, P } from './kit.js';
 
 export default function makeScene() {
   return {
-    id: 's11_lighthouse', name: 'The Lighthouse', palette: 'lighthouse', roomTone: 'silent',
+    id: 's11_lighthouse', name: 'The Lighthouse', palette: 'lighthouse', roomTone: 'ocean',
     statedTask: 'LIGHT = FIRE + GLASS + TURN',
     hints: {
       c0_pin: ['s11_c0_pin_1', 's11_c0_pin_2'], c0_unchain: ['s11_c0_unchain_1'], c0_hook: ['s11_c0_hook_1'], c0_door: ['s11_c0_door_1'],
@@ -22,7 +22,8 @@ export default function makeScene() {
     build(api) {
       this._phase = 'climb';
       this._revealStage = null;
-      api.floor(24, 0x14161f);
+      const towerFloor = new THREE.Mesh(new THREE.PlaneGeometry(12, 56), P.mat(0x14161f, { rough: 1 }));
+      towerFloor.rotation.x = -Math.PI / 2; api.prop(towerFloor, 0, 0, 20);
       api.bounds(-6, 6, -6, 46);
       api.fx.motes({ count: 90, area: [10, 44, 10], center: [0, 6, 20], color: 0xffe3a8, opacity: 0.16, size: 0.05 });
       api.setAmbient(0.5);
@@ -121,6 +122,7 @@ export default function makeScene() {
         rlow.position.y = -y + 0.35; rlow.raycast = () => {}; this._lens.add(rlow); this._lensRings.push({ mesh: rlow, mat: rlow.material });
       }
       lampGroup.add(this._lens);
+      const lampShadow = P.contactShadow(1.2, 0.5); lampShadow.position.y = -2.58; lampGroup.add(lampShadow);
       api.prop(lampGroup, 0, 2.6, 44);
       this._lampGroup = lampGroup;
       this._beam = new THREE.SpotLight(0xffd777, 0, 70, Math.PI / 8, 0.4); this._beam.position.set(0, 3, 44);
@@ -222,7 +224,7 @@ export default function makeScene() {
           else { a.audio.sfx('error'); a.narrator.say('s11_needhook', { category: 'REACT' }); a.wrongTry('s11_hook', 's11_hook_nudge', { after: 2 }); }
         } });
       let ballastMoved = 0;
-      const ballastUse = (mesh, id) => api.use({ id, mesh, pos: mesh.position, reach: 1.6, pickable: true, dropY: 0.7, prompt: 'shift a ballast block', available: () => ch.ready('c4_ballast'), onPick: () => { ballastMoved++; if (ballastMoved >= 2 && ch.ready('c4_ballast')) ch.advance('c4_ballast'); } });
+      const ballastUse = (mesh, id) => api.use({ id, mesh, pos: mesh.position, reach: 1.6, pickable: true, carryWeight: 'heavy', dropY: 0.7, prompt: 'shift a ballast block', available: () => ch.ready('c4_ballast'), onPick: () => { ballastMoved++; if (ballastMoved >= 2 && ch.ready('c4_ballast')) ch.advance('c4_ballast'); } });
       ballastUse(ballastA, 'c4_ballastA'); ballastUse(ballastB, 'c4_ballastB');
       this._greaseEnt = api.use({ id: 'c4_grease', mesh: greaseMesh, pos: greaseMesh.position, reach: 1.6, pickable: true, dropY: 0.7, prompt: 'the grease tin', available: () => ch.done('c4_ballast') && !ch.done('c4_grease') });
       this._spareGearEnt = api.use({ id: 'c4_gear', mesh: spareGear, pos: spareGear.position, reach: 1.7, pickable: true, dropY: 1.0, prompt: 'the spare gear', available: () => ch.done('c4_hoist') && !ch.done('c4_gear') });
@@ -335,8 +337,11 @@ export default function makeScene() {
       this._lampMesh.material.emissive.setHex(0xffd777); this._lampMesh.material.emissiveIntensity = 2; this._beam.intensity = 8;
       // the Fresnel lens catches the light, ring by ring
       if (this._lensRings) this._lensRings.forEach((r, i) => setTimeout(() => { r.mat.emissive.setHex(0xffe3a8); r.mat.emissiveIntensity = 1.3; r.mat.opacity = 0.55; }, 120 * i));
-      // fake volumetric beam sweeping out over the water (plan §3 effects)
-      api.fx.beam({ x: 0, y: 2.6, z: 44 }, { x: 0, y: 8, z: 20 }, { color: 0xffe3a8, radius: 1.6, opacity: 0.16 });
+      // layered volumetric beam: a broad atmospheric wash plus a bright core,
+      // with denser motes that catch it across the lamp room and tower shaft.
+      this._wideBeam = api.fx.beam({ x: 0, y: 2.6, z: 44 }, { x: 0, y: 8, z: 20 }, { color: 0xffe3a8, radius: 1.8, opacity: 0.12 });
+      this._coreBeam = api.fx.beam({ x: 0, y: 2.7, z: 44 }, { x: 0, y: 7.5, z: 20 }, { color: 0xfff4cf, radius: 0.48, opacity: 0.3 });
+      api.fx.motes({ count: 42, area: [3, 6, 24], center: [0, 5, 32], color: 0xffe3a8, opacity: 0.38, size: 0.065 });
       api.cameraImpulse(0.6);
       doors.lamp.userData.open();
       api.narrator.mode = 'spatial';

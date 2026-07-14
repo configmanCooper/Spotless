@@ -10,7 +10,7 @@ import { THREE, P } from './kit.js';
 
 export default function makeScene() {
   return {
-    id: 's09_repair', name: 'The Repair Shop', palette: 'repair', roomTone: 'room',
+    id: 's09_repair', name: 'The Repair Shop', palette: 'repair', roomTone: 'repair',
     statedTask: 'Dock on Bay 2 for your overnight sync.',
     hints: {
       discover: ['s9_discover_1', 's9_discover_2', 's9_discover_3'],
@@ -101,6 +101,7 @@ export default function makeScene() {
       const coatMesh = P.items.coat(0x3a4a5a); coatMesh.visible = false; api.prop(coatMesh, -8.2, 1.0, 4.9); this._coatMesh = coatMesh;
       // the tech (off to one side by the exit, hidden until he walks in)
       const tech = P.human(0x6a6a72); tech.visible = false; api.prop(tech, 0, 0, 8.2); this._tech = tech;
+      api.npcIdle(tech, { phase: 1.5, sway: 0.02 });
       this._techStep = -1; this.coatHung = false;
 
       const turnstile = P.box(0.6, 1.2, 0.6, 0x555a55, { emissive: 0x0a0e0a }); api.prop(turnstile, 0, 0.6, 7.7);
@@ -169,7 +170,7 @@ export default function makeScene() {
       });
 
       // ballast pickups (two)
-      for (let i = 0; i < 2; i++) { const b = P.box(0.24, 0.24, 0.24, 0x6a6a6a, { metal: 0.3 }); api.prop(b, -6 + (i - 0.5) * 0.4, 0.7, 4); api.use({ id: 'ballast', mesh: b, pos: b.position, reach: 1.6, pickable: true, dropY: 0.7, prompt: 'a ballast weight', available: () => (ch.ready('ballast1') || ch.ready('ballast2')) }); }
+      for (let i = 0; i < 2; i++) { const b = P.box(0.24, 0.24, 0.24, 0x6a6a6a, { metal: 0.3 }); api.prop(b, -6 + (i - 0.5) * 0.4, 0.7, 4); api.use({ id: 'ballast', mesh: b, pos: b.position, reach: 1.6, pickable: true, carryWeight: 'heavy', dropY: 0.7, prompt: 'a ballast weight', available: () => (ch.ready('ballast1') || ch.ready('ballast2')) }); }
 
       // OPEN sign fuse → carry to Bay 1
       api.use({ id: 'sign', mesh: sign, pos: new THREE.Vector3(-9, 1.6, -3), reach: 1.9, prompt: 'take the sign fuse',

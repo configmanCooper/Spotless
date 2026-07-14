@@ -1,5 +1,8 @@
 // engine/renderer.js — three.js renderer, scene root, lighting rig.
 import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { CONFIG } from '../config.js';
 
 export class Renderer {
@@ -13,6 +16,7 @@ export class Renderer {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.15;
+    this.renderer.info.autoReset = false;   // composer has multiple passes; accumulate one full frame
     this._baseExposure = 1.15;    // per-scene exposure target
     this._exposureGoal = 1.15;    // eased toward for blackout / reveals
 
@@ -20,6 +24,11 @@ export class Renderer {
     this.scene.fog = new THREE.Fog(0x141019, 22, 46);
 
     this.camera = new THREE.PerspectiveCamera(CONFIG.CAM_FOV, 1, 0.1, 200);
+    this.composer = new EffectComposer(this.renderer);
+    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.32, 0.55, 0.88);
+    this.composer.addPass(this.bloom);
+    this.bloomEnabled = true;
 
     // lighting: soft hemisphere + one key + fill (flat, warm, low-poly look §8).
     // Intensities are re-authored per scene via setPalette(pal.rig).
@@ -74,6 +83,7 @@ export class Renderer {
 
   // Smoothly push exposure toward a multiple of the scene's base (reveals/blackout).
   setExposureScale(scale) { this._exposureGoal = this._baseExposure * scale; }
+  setBloom(enabled) { this.bloomEnabled = !!enabled; }
   tickExposure(dt) {
     const cur = this.renderer.toneMappingExposure;
     const k = 1 - Math.exp(-dt * 2.5);
@@ -85,9 +95,17 @@ export class Renderer {
     const w = window.innerWidth, h = window.innerHeight;
     this.renderer.setPixelRatio(dpr);
     this.renderer.setSize(w, h, false);
+    // Keep the main RenderPass at native capped DPR. UnrealBloomPass performs its
+    // own mip downsampling; reducing the composer ratio would blur the whole game.
+    this.composer.setPixelRatio(dpr);
+    this.composer.setSize(w, h);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
   }
 
-  render() { this.renderer.render(this.scene, this.camera); }
+  render() {
+    this.renderer.info.reset();
+    if (this.bloomEnabled) this.composer.render();
+    else this.renderer.render(this.scene, this.camera);
+  }
 }

@@ -34,6 +34,7 @@ class Game {
     this.state = this.save.load();
     this.settings = this.state.settings;
     this.audio.setMaster(this.settings.master ?? 0.9);
+    this.renderer.setBloom(this.settings.bloom === true);
 
     let script = {};
     try { script = await (await fetch('js/narrator_script.json')).json(); } catch {}
@@ -92,6 +93,7 @@ class Game {
     if (k.startsWith('sub')) this.ui.applySubtitleSettings(this.settings);
     if (k === 'subs' && !v) this.ui.hideSub();
     if (k === 'master') this.audio.setMaster(v);
+    if (k === 'bloom') this.renderer.setBloom(v);
     if (k === 'reducedMotion') { this.world.reducedMotion = !!v; document.documentElement.classList.toggle('reduced-motion', !!v); }
   }
 

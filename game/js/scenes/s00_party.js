@@ -91,6 +91,7 @@ export default function makeScene() {
 
       // host with party hat, by the cake
       const host = P.human(0x8a6a5a); const hostHat = P.items.partyHat(0xe98db0); hostHat.position.y = 1.72; host.add(hostHat); api.prop(host, 5, 0, 4.4); this._host = host;
+      api.npcIdle(host, { phase: 0.4, sway: 0.02 });
 
       // guests — varied skin/clothes colours; some wear party hats; some sit on the couch
       const guestCols = [0xb87a5a, 0x9a6a4a, 0xd0a080, 0x7a5a44, 0xc99a70, 0x8a6a90, 0x5a8a7a, 0xa85a6a, 0x6a7ab0];
@@ -117,6 +118,7 @@ export default function makeScene() {
       this._girl = P.human(0xc98aa8); this._girl.scale.setScalar(0.7);
       const girlHat = P.items.partyHat(0x8bafff); girlHat.position.y = 1.72; this._girl.add(girlHat);
       api.prop(this._girl, -2, 0, -2);
+      api.npcIdle(this._girl, { phase: 2.1, sway: 0.035, head: 0.18 });
 
       // guest chatter about the robot (some kind, some mean)
       this._chatterT = 6 + Math.random() * 6;

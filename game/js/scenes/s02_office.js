@@ -7,7 +7,7 @@ import { THREE, P } from './kit.js';
 
 export default function makeScene() {
   return {
-    id: 's02_office', name: 'The Office', palette: 'office', roomTone: 'room',
+    id: 's02_office', name: 'The Office', palette: 'office', roomTone: 'office',
     statedTask: 'Shred everything in the IN tray before morning.',
     hints: {
       readletter: ['s2_read_1', 's2_read_2', 's2_read_3'],

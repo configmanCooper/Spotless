@@ -207,6 +207,7 @@ export class UI {
         <div class="opt"><span>Subtitle background</span>${seg('subOpacity', ['low', 'normal', 'high'], settings.subOpacity || 'normal')}</div>
         <div class="opt"><span>High contrast</span>${seg('subContrast', ['on', 'off'], settings.subContrast ? 'on' : 'off')}</div>
         <div class="opt"><span>Reduced motion</span>${seg('reducedMotion', ['on', 'off'], settings.reducedMotion ? 'on' : 'off')}</div>
+        <div class="opt"><span>Light bloom</span>${seg('bloom', ['on', 'off'], settings.bloom === true ? 'on' : 'off')}</div>
       </div>
       <button class="btn" id="s-back">Back</button>`;
     this.pauseEl.querySelectorAll('.seg button').forEach(b => b.onclick = () => {
@@ -215,6 +216,7 @@ export class UI {
       if (k === 'subContrast') v = (v === 'on');
       if (k === 'assist') v = (v === 'on');
       if (k === 'reducedMotion') v = (v === 'on');
+      if (k === 'bloom') v = (v === 'on');
       if (k === 'master') v = Number(v);
       onChange(k, v);
       b.parentElement.querySelectorAll('button').forEach(x => x.classList.remove('sel'));

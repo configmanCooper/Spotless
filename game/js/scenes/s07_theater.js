@@ -9,7 +9,7 @@ const SNORE = 6; // seconds per snore cycle; snoring during the first 3s
 
 export default function makeScene() {
   return {
-    id: 's07_theater', name: 'The Theater', palette: 'theater', roomTone: 'room',
+    id: 's07_theater', name: 'The Theater', palette: 'theater', roomTone: 'theater',
     statedTask: 'Sweep the wings. Be invisible.',
     hints: {
       pagea: ['s7_pagea_1', 's7_pagea_2', 's7_pagea_3'],
@@ -41,6 +41,7 @@ export default function makeScene() {
       const tgt = new THREE.Object3D(); tgt.position.set(0, 0, -2.5); api.group.add(this._spot); api.group.add(tgt); this._spot.target = tgt;
       this._spotPos = new THREE.Vector3(0, 0, -2.5);
       const actor = P.human(0xc7a06a); api.prop(actor, 0, 0.3, -5);
+      api.npcIdle(actor, { phase: 0.2, sway: 0.03, head: 0.18 });
 
       // rustling bag with half page
       const bag = P.items.trashBag(0x3a3a3a); api.prop(bag, -8, 0.0, 4);
@@ -49,6 +50,7 @@ export default function makeScene() {
       // prompter box + sleeping prompter (snore window)
       const box = P.box(0.9, 0.9, 0.7, 0x33262e); api.prop(box, 5, 0.5, -3); api.nav.addBox(5, -3, 0.9, 0.7);
       const prompter = P.human(0x5a4a55); prompter.scale.setScalar(0.9); api.prop(prompter, 5, 0, -2); this._prompter = prompter;
+      api.npcIdle(prompter, { phase: 3.1, sway: 0.012, head: 0.06 });
       const boxKeyMesh = P.items.key(0xffd777); boxKeyMesh.position.set(0.2, 1.3, 0); boxKeyMesh.scale.setScalar(0.7); prompter.add(boxKeyMesh);
       // a "Zzz" that shows when he's actually asleep — the snore window made visible
       this._snoreGlow = P.labelPlaque('z Z z', 0.4, 0.2, { bg: '#20161c', fg: '#b0a0d0', frame: false }); this._snoreGlow.position.set(0.3, 1.9, 0); this._snoreGlow.material.transparent = true; prompter.add(this._snoreGlow);

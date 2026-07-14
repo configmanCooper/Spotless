@@ -8,7 +8,7 @@ import { THREE, P } from './kit.js';
 
 export default function makeScene() {
   return {
-    id: 's10_blackout', name: 'The Blackout Road', palette: 'blackout', roomTone: 'wind',
+    id: 's10_blackout', name: 'The Blackout Road', palette: 'blackout', roomTone: 'blackout',
     statedTask: 'Get through the dark.',
     hints: {
       lamp: ['s10_lamp_1', 's10_lamp_2', 's10_lamp_3'],
@@ -51,6 +51,7 @@ export default function makeScene() {
       const lhCap = new THREE.Mesh(new THREE.ConeGeometry(1.1, 1.2, 12), P.mat(0x14161f, { edges: false })); api.prop(lhCap, 0, 6.6, -38);
       const lhGlow = P.glowSprite(0xffe3a8); lhGlow.position.set(0, 5.7, -38); lhGlow.material.opacity = 0.35; lhGlow.scale.setScalar(1.6); api.group.add(lhGlow); this._lhGlow = lhGlow;
       const man = P.human(0x3a3a4a); api.prop(man, 4, 0, 3);
+      api.npcIdle(man, { phase: 2.8, sway: 0.018 });
       api.narrator.say('s10_intro', { category: 'STORY' });
       api.narrator.say('porchman_1', { category: 'VOICE' });
 

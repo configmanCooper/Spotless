@@ -133,18 +133,42 @@ export class Audio {
   // --- room tone: a soft filtered noise bed per scene ---
   setRoomTone(kind) {
     this.ensure(); if (!this.ctx) return;
-    if (this.roomTone) { try { this.roomTone.src.stop(); } catch {} this.roomTone = null; }
+    if (this.roomTone) {
+      for (const source of this.roomTone.sources || []) { try { source.stop(); } catch {} }
+      try { this.roomTone.g.disconnect(); } catch {}
+      this.roomTone = null;
+    }
     if (kind === 'silent' || !this.enabled) return;
+    const presets = {
+      party: { filter: 'lowpass', freq: 700, gain: 0.05 },
+      office: { filter: 'bandpass', freq: 950, gain: 0.018, hum: 60, humGain: 0.006 },
+      home: { filter: 'lowpass', freq: 460, gain: 0.016, hum: 120, humGain: 0.003 },
+      wind: { filter: 'highpass', freq: 380, gain: 0.028 },
+      museum: { filter: 'lowpass', freq: 260, gain: 0.014, hum: 48, humGain: 0.004 },
+      carehome: { filter: 'lowpass', freq: 520, gain: 0.014, hum: 60, humGain: 0.003 },
+      theater: { filter: 'lowpass', freq: 190, gain: 0.018, hum: 45, humGain: 0.004 },
+      scrapyard: { filter: 'bandpass', freq: 720, gain: 0.023, hum: 72, humGain: 0.006 },
+      repair: { filter: 'bandpass', freq: 520, gain: 0.018, hum: 84, humGain: 0.006 },
+      blackout: { filter: 'highpass', freq: 520, gain: 0.025 },
+      ocean: { filter: 'bandpass', freq: 260, gain: 0.024, hum: 42, humGain: 0.002 },
+      room: { filter: 'lowpass', freq: 300, gain: 0.02 },
+    };
+    const p = presets[kind] || presets.room;
     const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * 2, this.ctx.sampleRate);
     const data = buf.getChannelData(0);
     for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.5;
     const src = this.ctx.createBufferSource(); src.buffer = buf; src.loop = true;
-    const filt = this.ctx.createBiquadFilter(); filt.type = 'lowpass';
-    filt.frequency.value = kind === 'party' ? 700 : 300;
-    const baseGain = kind === 'party' ? 0.05 : 0.02;
-    const g = this.ctx.createGain(); g.gain.value = baseGain * this.master;
-    src.connect(filt).connect(g).connect(this.ctx.destination);
+    const filt = this.ctx.createBiquadFilter(); filt.type = p.filter; filt.frequency.value = p.freq;
+    const noiseGain = this.ctx.createGain(); noiseGain.gain.value = p.gain;
+    const g = this.ctx.createGain(); g.gain.value = this.master;
+    src.connect(filt).connect(noiseGain).connect(g).connect(this.ctx.destination);
     src.start();
-    this.roomTone = { src, g, baseGain };
+    const sources = [src];
+    if (p.hum) {
+      const hum = this.ctx.createOscillator(); hum.type = 'sine'; hum.frequency.value = p.hum;
+      const humGain = this.ctx.createGain(); humGain.gain.value = p.humGain || 0.003;
+      hum.connect(humGain).connect(g); hum.start(); sources.push(hum);
+    }
+    this.roomTone = { sources, g, baseGain: 1 };
   }
 }

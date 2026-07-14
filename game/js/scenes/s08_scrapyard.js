@@ -8,7 +8,7 @@ import { THREE, P } from './kit.js';
 
 export default function makeScene() {
   return {
-    id: 's08_scrapyard', name: 'The Scrapyard', palette: 'scrapyard', roomTone: 'room',
+    id: 's08_scrapyard', name: 'The Scrapyard', palette: 'scrapyard', roomTone: 'scrapyard',
     statedTask: 'Metals left. Plastics right. Cores in the red bin.',
     hints: {
       estop: ['s8_estop_1', 's8_estop_2', 's8_estop_3'],
@@ -61,7 +61,7 @@ export default function makeScene() {
       for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) { const sq = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.6), new THREE.MeshBasicMaterial({ color: 0x4a3f2a, transparent: true, opacity: 0.25 })); sq.rotation.x = -Math.PI / 2; api.prop(sq, gridOX + c * cell, 0.02, gridOZ + r * cell - 1); }
       ['A', 'B', 'C'].forEach((L, r) => floorTile(L, gridOX - 0.65, gridOZ + r * cell - 1));
       ['1', '2', '3'].forEach((N, c) => floorTile(N, gridOX + c * cell, gridOZ - 1 - 0.65));
-      this._barrels.forEach((b, i) => { const m = P.items.barrel(0x8a6a3a); api.prop(m, gridOX + b.c * cell, 0.35, gridOZ + b.r * cell - 1); b.mesh = m; });
+      this._barrels.forEach((b, i) => { const x = gridOX + b.c * cell, z = gridOZ + b.r * cell - 1; const m = P.items.barrel(0x8a6a3a); api.prop(m, x, 0.35, z); b.shadow = api.groundShadow(x, z, 0.38, 0.42); b.mesh = m; });
       api.prop(P.labelPlaque('LOADING GRID', 1.0, 0.3, { bg: '#241d16', fg: '#ffa64b' }), -6.6, 2.2, 4.6);
 
       // crane cab: two dials + drop; board key hangs here
@@ -84,9 +84,11 @@ export default function makeScene() {
       // walkway gate + heap dig + core + bell + chutes
       const gate = api.door(3, 4, 2.5, 0.3, 0x2a3a5a, 1.8);
       const redBin = P.items.bin(0xc9433f, false); api.prop(redBin, -6, 0.7, 3); api.nav.addBox(-6, 3, 1.4, 1.4); redBin.scale.set(1.6, 1.6, 1.6);
+      api.groundShadow(-6, 3, 0.8, 0.45);
       api.mountSign(redBin, 'CORES', 0.7, 0.18, [0, 0.65, 0], { bg: '#b53030', fg: '#fff' });
       const metalBin = P.items.bin(0x6a6f76, false); api.prop(metalBin, -8.5, 0.55, 0.5); api.nav.addBox(-8.5, 0.5, 1, 1);
       const plasticBin = P.items.bin(0x9a784a, false); api.prop(plasticBin, 8.5, 0.55, 0.5); api.nav.addBox(8.5, 0.5, 1, 1);
+      api.groundShadow(-8.5, 0.5, 0.52, 0.38); api.groundShadow(8.5, 0.5, 0.52, 0.38);
       api.mountSign(metalBin, 'METALS', 0.7, 0.18, [0, 0.65, 0], { bg: '#555a60', fg: '#fff' });
       api.mountSign(plasticBin, 'PLASTICS', 0.7, 0.18, [0, 0.65, 0], { bg: '#8a693a', fg: '#fff' });
       const blueChute = P.box(1.4, 1.4, 1.4, 0x4a7ac9, { emissive: 0x10203a }); api.prop(blueChute, 6, 0.7, 3); api.nav.addBox(6, 3, 1.4, 1.4);
@@ -148,7 +150,7 @@ export default function makeScene() {
         onUse: (a) => {
           const r = dlat.index, c = dlong.index;
           const hit = this._barrels.find(b => !b.cleared && b.r === r && b.c === c);
-          if (hit) { hit.cleared = true; hit.mesh.visible = false; a.audio.sfx('thunk'); a.resetWrong('s8_crane'); if (this._barrels.every(b => b.cleared)) ch.advance('crane'); }
+          if (hit) { hit.cleared = true; hit.mesh.visible = false; if (hit.shadow) hit.shadow.visible = false; a.audio.sfx('thunk'); a.resetWrong('s8_crane'); if (this._barrels.every(b => b.cleared)) ch.advance('crane'); }
           else { a.narrator.line('The magnet clanged on empty concrete.', { id: 's8_cranemiss', category: 'REACT' }); a.wrongTry('s8_crane', 's8_crane_nudge', { after: 3 }); }
         } });
 
@@ -241,7 +243,7 @@ export default function makeScene() {
       api._chain.restore((cp.payload && cp.payload.steps) || []);
       this.beltStopped = true; this.genDead = true; this.lockedOut = true; this._restartT = -1;
       // hide any barrels the crane had already cleared (cosmetic parity)
-      this._barrels.forEach(b => { if (b.mesh) { b.cleared = true; b.mesh.visible = false; } });
+      this._barrels.forEach(b => { if (b.mesh) { b.cleared = true; b.mesh.visible = false; if (b.shadow) b.shadow.visible = false; } });
       api.world.dust.position.set(3, 0, 5);
       api.toast('Restored: the line is locked out. The walkway gate is ahead.', 3200);
     },

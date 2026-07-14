@@ -9,7 +9,7 @@ const CYCLE = 24; // demo loop seconds: spill / ad / applause / DIM (6s each)
 
 export default function makeScene() {
   return {
-    id: 's01_showroom', name: 'The Showroom', palette: 'showroom', roomTone: 'room',
+    id: 's01_showroom', name: 'The Showroom', palette: 'showroom', roomTone: 'office',
     statedTask: 'Clean the demo spill on the stage.',
     hints: {
       staffkey: ['s1_staffkey_1', 's1_staffkey_2', 's1_staffkey_3'],

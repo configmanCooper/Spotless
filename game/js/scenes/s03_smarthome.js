@@ -8,7 +8,7 @@ import { THREE, P } from './kit.js';
 
 export default function makeScene() {
   return {
-    id: 's03_smarthome', name: 'The Smart Home', palette: 'smarthome', roomTone: 'room',
+    id: 's03_smarthome', name: 'The Smart Home', palette: 'smarthome', roomTone: 'home',
     statedTask: "Follow the house's morning routine.",
     hints: {
       fluff: ['s3_fluff_1', 's3_fluff_2', 's3_fluff_3'],

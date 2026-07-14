@@ -8,7 +8,7 @@ import { THREE, P } from './kit.js';
 
 export default function makeScene() {
   return {
-    id: 's05_museum', name: 'The Museum', palette: 'museum', roomTone: 'room',
+    id: 's05_museum', name: 'The Museum', palette: 'museum', roomTone: 'museum',
     statedTask: 'Dust all twelve exhibits. Touch nothing.',
     hints: {
       floormap: ['s5_floormap_1', 's5_floormap_2', 's5_floormap_3'],
@@ -97,6 +97,7 @@ export default function makeScene() {
       // timing reads by MOVEMENT + LIGHT + SOUND, not the case colour alone (plan §S5)
       const desk = P.box(1.4, 0.9, 0.8, 0x3a3d4c); api.prop(desk, 0, 0.45, 7); api.nav.addBox(0, 7, 1.4, 0.8);
       this._guard = api.patroller({ color: 0x4a5a6a, waypoints: [{ x: -8, z: 4 }, { x: 0, z: 6 }, { x: 8, z: 4 }, { x: 0, z: 6 }], speed: 2.2, dwell: 2 });
+      api.npcIdle(this._guard.mesh, { phase: 1.8, sway: 0.015 });
       this._guardCone = new THREE.Mesh(new THREE.CircleGeometry(2.0, 20), new THREE.MeshBasicMaterial({ color: 0xffe6a0, transparent: true, opacity: 0.14, depthWrite: false, toneMapped: false }));
       this._guardCone.rotation.x = -Math.PI / 2; this._guardCone.position.y = 0.04; api.group.add(this._guardCone);
       this._guardLamp = P.box(0.1, 0.1, 0.14, 0x1a1a1e, { emissive: 0xffe6a0, emissiveIntensity: 0.9, edges: false }); this._guard.mesh.add(this._guardLamp); this._guardLamp.position.set(0, 1.0, 0.3);

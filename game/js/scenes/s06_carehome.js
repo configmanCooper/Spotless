@@ -7,7 +7,7 @@ import { THREE, P } from './kit.js';
 
 export default function makeScene() {
   return {
-    id: 's06_carehome', name: 'The Care Home', palette: 'carehome', roomTone: 'room',
+    id: 's06_carehome', name: 'The Care Home', palette: 'carehome', roomTone: 'carehome',
     statedTask: "Put everything in the room in the bin.",
     hints: {
       suitcase: ['s6_suitcase_1', 's6_suitcase_2', 's6_suitcase_3'],
@@ -25,6 +25,7 @@ export default function makeScene() {
       api.prop(P.labelPlaque('ROOM 14', 0.7, 0.24, { bg: '#d8ccbe', fg: '#4a4030' }), 4, 1.6, 0.6);
 
       const bin = P.items.bin(0x4a5a3f); api.prop(bin, -6, 0.5, -4);
+      api.groundShadow(-6, -4, 0.48, 0.4);
       api.use({ id: 'bin', mesh: bin, pos: new THREE.Vector3(-6, 0.5, -4), reach: 1.8, prompt: 'bin',
         acceptCarry: (item, a) => { a.audio.sfx('dump'); return !(String(item.id).startsWith('photo') || String(item.id).startsWith('glasses')); } });
 
@@ -45,6 +46,7 @@ export default function makeScene() {
 
       // the old man + suitcase
       const man = P.human(0x8a7a6a); api.prop(man, 8, 0, 2);
+      api.npcIdle(man, { phase: 2.4, sway: 0.018, head: 0.16 });
       // an open, EMPTY glasses case on the chair beside him — he's lost his specs
       const caseBase = P.box(0.26, 0.06, 0.14, 0x2a2a30); api.prop(caseBase, 7.3, 0.55, 2.4);
       const caseLid = P.box(0.26, 0.06, 0.14, 0x2a2a30); caseLid.position.set(0, 0.06, -0.13); caseLid.rotation.x = -1.1; caseBase.add(caseLid);
@@ -106,6 +108,7 @@ export default function makeScene() {
       this._ch = ch;
 
       const nurse = P.human(0x6a8a7a); api.prop(nurse, -3, 0, 3);
+      api.npcIdle(nurse, { phase: 0.7, sway: 0.022 });
       api.world.dust.position.set(-2, 0, 2);
       api.setAnchors([{ cx: 2, cz: 0, dist: 16 }]);
       api.narrator.say('s6_intro', { category: 'STORY' });

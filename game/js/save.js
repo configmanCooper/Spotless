@@ -11,7 +11,7 @@ const DEFAULT = {
   solveTimes: {},        // sceneId -> {solveTime, hints}
   scenesDone: [],
   settings: { hints: 'normal', subs: true, master: 0.9, assist: false, reducedMotion: false,
-    subSize: 'normal', subSpeed: 'normal', subOpacity: 'normal', subContrast: false },
+    bloom: false, subSize: 'normal', subSpeed: 'normal', subOpacity: 'normal', subContrast: false },
 };
 
 const MIGRATIONS = {

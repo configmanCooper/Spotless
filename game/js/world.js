@@ -18,6 +18,7 @@ export class World {
     scene.add(this.dust);
 
     this.carry = null;         // { entity, mesh } currently held (one item)
+    this.carryWeight = 'normal';
     this.cleaning = null;      // entity being cleaned
     this.cleanT = 0;
     this.lampOn = false;
@@ -73,11 +74,18 @@ export class World {
     if (this.lampOn) this.rig.lampLight.intensity = 5 * Math.max(0.2, this.lampBattery);
   }
   _updateLamp(dt) {
-    if (!this.lampDrains) return;
+    if (!this.lampDrains) { if (this.rig.scrMat) this.rig.scrMat.emissiveIntensity = 0.9; return; }
+    this._lampPulse = (this._lampPulse || 0) + dt;
     if (this.lampOn) {
       this.lampBattery -= dt / (CONFIG.LAMP.DRAIN * this.lampDrainScale);
       if (this.lampBattery <= CONFIG.LAMP.EMBER) { this.lampBattery = CONFIG.LAMP.EMBER; this.lampOn = false; this.rig.lampLight.intensity = 0; }
       else this.rig.lampLight.intensity = 5 * Math.max(0.2, this.lampBattery);
+    }
+    if (this.rig.scrMat) {
+      const low = this.lampBattery < 0.25;
+      this.rig.scrMat.emissiveIntensity = low && !this.reducedMotion
+        ? 0.55 + (Math.sin(this._lampPulse * 5) * 0.5 + 0.5) * 0.45
+        : 0.9;
     }
   }
 
@@ -87,10 +95,12 @@ export class World {
     const mesh = entity.carryMesh || entity.mesh;
     if (!mesh) return false;
     const origParent = mesh.parent;               // remember where it lived (scene group)
+    const origRotation = mesh.rotation.clone();
     mesh.parent && mesh.parent.remove(mesh);
     this.rig.carryAnchor.add(mesh);
     mesh.position.set(0, 0, 0); mesh.rotation.set(0, 0, 0);
-    this.carry = { entity, mesh, origParent };
+    this.carry = { entity, mesh, origParent, origRotation };
+    this.carryWeight = entity.carryWeight || mesh.userData?.carryWeight || 'normal';
     entity.carried = true;
     this.reach();
     this.audio?.sfx('pick');
@@ -104,14 +114,16 @@ export class World {
   }
   drop(reason = 'manual') {
     if (!this.carry) return;
-    const { entity, mesh, origParent } = this.carry;
+    const { entity, mesh, origParent, origRotation } = this.carry;
     const wp = new THREE.Vector3();
     mesh.getWorldPosition(wp);
     this.rig.carryAnchor.remove(mesh);
     (origParent || this.scene).add(mesh);         // back into the scene group, not root
     mesh.position.copy(wp); mesh.position.y = entity.dropY ?? 0.2;
+    if (origRotation) mesh.rotation.copy(origRotation);
     entity.carried = false;
     this.carry = null;
+    this.carryWeight = 'normal';
     this.reach();
     this.audio?.sfx('place');
     this.onDrop && this.onDrop(reason, entity);
@@ -128,6 +140,7 @@ export class World {
     this.rig.carryAnchor.remove(mesh);
     entity.carried = false;
     this.carry = null;
+    this.carryWeight = 'normal';
     if (dispose) disposeGroup(mesh);
     return true;
   }
@@ -137,6 +150,7 @@ export class World {
     const { entity, mesh } = this.carry;
     this.rig.carryAnchor.remove(mesh);
     this.carry = null;
+    this.carryWeight = 'normal';
     return entity;
   }
 
@@ -167,7 +181,8 @@ export class World {
     if (moving && !this.cleaning) {
       // in a draining-lamp scene, walking in the dark is slow (blind), never harmful
       const darkPenalty = (this.lampDrains && !this.lampOn) ? this.darkMoveScale : 1;
-      const sp = CONFIG.DUST_SPEED * darkPenalty * dt;
+      const carryPenalty = this.carryWeight === 'heavy' ? 0.88 : 1;
+      const sp = CONFIG.DUST_SPEED * darkPenalty * carryPenalty * dt;
       this.nav.move(p, mx * sp, mz * sp, CONFIG.DUST_RADIUS);
       this.facing = Math.atan2(mx, mz);
     }
@@ -242,6 +257,7 @@ export class World {
         this.rig.carryAnchor.remove(mesh);
         this.scene.remove(mesh);
         this.carry = null;
+        this.carryWeight = 'normal';
         this.audio?.sfx('place');
         return;
       }
@@ -260,6 +276,7 @@ export class World {
 
     const r = this.rig; if (!r) return;
     const armL = r.arms && r.arms.l, armR = r.arms && r.arms.r, head = r.head;
+    const carryAnchor = r.carryAnchor;
     // cleaning lean eases in while cleaning, out otherwise
     const targetPose = this.cleaning ? 1 : 0;
     this._cleanPose += (targetPose - this._cleanPose) * Math.min(1, dt * 8);
@@ -270,6 +287,7 @@ export class World {
     if (this.reducedMotion) {
       if (armL) armL.rotation.x = 0; if (armR) armR.rotation.x = 0;
       if (head) { head.rotation.y = 0; head.rotation.x = 0; }
+      if (carryAnchor) carryAnchor.position.y = this.carry && this.carryWeight === 'heavy' ? 0.72 : 0.9;
       this.dust.rotation.x = 0;
       return;
     }
@@ -287,6 +305,11 @@ export class World {
       head.rotation.x = this._cleanPose * 0.22 + idle * 0.03;
     }
     // torso lean forward while cleaning
-    this.dust.rotation.x = this._cleanPose * 0.14;
+    const heavy = this.carry && this.carryWeight === 'heavy' ? 1 : 0;
+    this.dust.rotation.x = this._cleanPose * 0.14 + heavy * 0.06;
+    if (carryAnchor) {
+      const targetY = heavy ? 0.72 : 0.9;
+      carryAnchor.position.y += (targetY - carryAnchor.position.y) * Math.min(1, dt * 8);
+    }
   }
 }

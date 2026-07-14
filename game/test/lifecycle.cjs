@@ -52,6 +52,11 @@ function serve() {
       g._setSetting('master', 0.5);
       return true;
     }));
+    assert('bloom setting reaches renderer', await page.evaluate(() => {
+      const g = window.__SPOTLESS;
+      g._setSetting('bloom', false); const off = !g.renderer.bloomEnabled;
+      g._setSetting('bloom', true); return off && g.renderer.bloomEnabled;
+    }));
 
     assert('virtual touch interact presses and holds', await page.evaluate(() => {
       const i = window.__SPOTLESS.input;
@@ -142,6 +147,27 @@ function serve() {
       g.loadScene('s11_lighthouse');
     });
     assert('scene transition clears carried item', await page.evaluate(() => window.__SPOTLESS.world.carry === null));
+
+    assert('heavy carry metadata changes Dust posture and speed state', await page.evaluate(() => {
+      const g = window.__SPOTLESS;
+      g.loadScene('s09_repair');
+      const ballast = g.interact.entities.find(e => e.id === 'ballast');
+      g.world.pickUp(ballast);
+      const heavy = g.world.carryWeight === 'heavy';
+      g.world._animate(0.2, false);
+      const lowered = g.world.rig.carryAnchor.position.y < 0.9;
+      g.world.clearCarry({ dispose: false });
+      return heavy && lowered;
+    }));
+    assert('carried gear restores its authored rotation when dropped', await page.evaluate(() => {
+      const g = window.__SPOTLESS;
+      g.loadScene('s08_scrapyard');
+      const gear = g.interact.entities.find(e => e.id === 'sort_metal');
+      const before = gear.mesh.rotation.x;
+      g.world.pickUp(gear);
+      g.world.drop();
+      return Math.abs(gear.mesh.rotation.x - before) < 0.0001;
+    }));
 
     await page.evaluate(() => {
       const g = window.__SPOTLESS;

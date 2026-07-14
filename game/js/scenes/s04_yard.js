@@ -31,6 +31,7 @@ export default function makeScene() {
       this._cloud = new THREE.Mesh(new THREE.CircleGeometry(5, 24), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.16, depthWrite: false, toneMapped: false }));
       this._cloud.rotation.x = -Math.PI / 2; this._cloud.position.y = 0.02; this._cloud.renderOrder = -1; api.group.add(this._cloud);
       const neighbor = P.human(0x7a6a5a); api.prop(neighbor, 6, 0.4, 4);
+      api.npcIdle(neighbor, { phase: 1.2, sway: 0.018 });
 
       // wind strength: full while the player fusses, easing toward calm as Dust
       // holds still — the environment itself is the confirmation (plan §S4)

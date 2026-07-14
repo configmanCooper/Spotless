@@ -397,13 +397,13 @@ export const items = {
     const body = pm(new T.CylinderGeometry(0.28, 0.28, 0.7, 16), hex, { rough: 0.6, metal: 0.2 });
     const r1 = pm(new T.TorusGeometry(0.29, 0.02, 6, 18), 0x5a4a2a); r1.rotation.x = Math.PI / 2; r1.position.y = 0.2;
     const r2 = r1.clone(); r2.position.y = -0.2;
-    return grp(body, r1, r2);
+    const g = grp(body, r1, r2); g.userData.carryWeight = 'heavy'; return g;
   },
   gear(hex = 0x8a8a5a, teeth = 10) {
     const g = grp(pm(new T.CylinderGeometry(0.22, 0.22, 0.12, 18), hex, { metal: 0.5, rough: 0.4 }));
     const hole = pm(new T.CylinderGeometry(0.07, 0.07, 0.14, 12), 0x2a2a2a); g.add(hole);
     for (let i = 0; i < teeth; i++) { const t = new T.Mesh(new T.BoxGeometry(0.08, 0.13, 0.08), mat(hex, { metal: 0.5 })); const a = (i / teeth) * Math.PI * 2; t.position.set(Math.cos(a) * 0.26, 0, Math.sin(a) * 0.26); t.rotation.y = -a; g.add(t); }
-    g.rotation.x = Math.PI / 2; return g;
+    g.rotation.x = Math.PI / 2; g.userData.carryWeight = 'heavy'; return g;
   },
   prism(hex = 0xbfe0ff, cracked = false) {
     const m = pm(new T.OctahedronGeometry(0.16), cracked ? 0x8a9aaa : hex, { rough: cracked ? 0.7 : 0.15, metal: 0.1, emissive: cracked ? 0x000000 : hex, emissiveIntensity: cracked ? 0 : 0.12 });
@@ -509,7 +509,7 @@ export const items = {
     const hoseA = pm(new T.TorusGeometry(0.12, 0.03, 6, 12, Math.PI), 0x33363c); hoseA.position.set(0.24, 0.2, 0); hoseA.rotation.z = -0.5;
     const wheel = pm(new T.CylinderGeometry(0.06, 0.06, 0.05, 10), 0x22242a); wheel.rotation.x = Math.PI / 2; wheel.position.set(0.18, -0.22, 0);
     const wheel2 = wheel.clone(); wheel2.position.x = -0.18;
-    return grp(body, lid, hoseA, wheel, wheel2);
+    const g = grp(body, lid, hoseA, wheel, wheel2); g.userData.carryWeight = 'heavy'; return g;
   },
   core(hex = 0x6a6a6a, warm = false) {
     const m = pm(new T.IcosahedronGeometry(0.28, 0), hex, warm ? { emissive: 0x5a2a08, rough: 0.4 } : { rough: 0.6, metal: 0.2 });
@@ -536,6 +536,7 @@ export const items = {
     const back = pm(new T.BoxGeometry(2.0, 0.6, 0.25), hex, { rough: 0.95 }); back.position.set(0, 0.6, -0.34); g.add(back);
     for (const sx of [-1, 1]) { const arm = pm(new T.BoxGeometry(0.25, 0.5, 0.9), hex, { rough: 0.95 }); arm.position.set(sx * 0.88, 0.45, 0); g.add(arm); }
     for (const sx of [-0.5, 0.5]) { const cush = pm(new T.BoxGeometry(0.85, 0.16, 0.7), lighten(hex, 0.12), { rough: 0.95, edges: false }); cush.position.set(sx, 0.56, 0.03); g.add(cush); }
+    g.add(contactShadow(1.1, 0.38));
     return g;
   },
   tv(hex = 0x14141a) {
