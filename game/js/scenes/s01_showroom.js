@@ -76,6 +76,10 @@ export default function makeScene() {
       this._marqueeText = '';
 
       // ---- staff door + badge reader ----
+      // A continuous backstage partition connects directly to the staff door.
+      // The breaker and dispenser sit behind it, so the badge route is mandatory.
+      api.wall(-8.55, -8, 0.9, 0.3, 0x2a323c, 2.0);
+      api.wall(1.55, -8, 14.9, 0.3, 0x2a323c, 2.0);
       this._staffDoor = api.door(-7, -8, 2.2, 0.3, 0x33414d, 2.0);
       const reader = P.box(0.2, 0.3, 0.1, 0x2a2e36, { emissive: 0x101418 }); api.prop(reader, -5.7, 1.3, -7.7);
       api.mountSign(reader, '▮', 0.16, 0.16, [0, 0.35, 0.09], { bg: '#2a2e36', fg: '#7fd7ff' });

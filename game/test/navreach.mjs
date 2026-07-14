@@ -76,6 +76,19 @@ const MARGIN = 0.14;   // a comfortable-clearance pass: corridors must fit R+MAR
 let totalProblems = 0, totalTight = 0;
 for (const S of SCENES) {
   const h = build(S.id);
+  if (S.id === 's01_showroom') {
+    const b = h.nav.bounds || { minX: -12, maxX: 12, minZ: -14, maxZ: 12 };
+    const closed = reachSetR(h.nav, h.world.dust.position.clone(), 0.2, b, R);
+    for (const id of ['breaker', 'dispenser']) {
+      const e = h.interact.entities.find(x => x.id === id);
+      const pos = e.pos || e.mesh.position;
+      const reach = e.reach ?? CONFIG.INTERACT_REACH;
+      if (minDistToReach(closed.seen, pos) <= reach + R) {
+        console.log(`\n✗ ${S.id}: '${id}' reachable before staff door opens`);
+        totalProblems++;
+      }
+    }
+  }
   h.group.traverse(o => { if (o.userData && o.userData.open && o.userData.navBox) { h.nav.removeBox(o.userData.navBox); } });
   const b = h.nav.bounds || { minX: -12, maxX: 12, minZ: -14, maxZ: 12 };
   const box = { minX: b.minX, maxX: b.maxX, minZ: b.minZ, maxZ: b.maxZ };
@@ -107,4 +120,3 @@ for (const S of SCENES) {
 }
 console.log(`\n${totalProblems === 0 ? 'NAV OK' : totalProblems + ' NAV PROBLEM(S)'}${totalTight ? ' — ' + totalTight + ' tight-corridor warning(s)' : ''}`);
 process.exit(totalProblems ? 1 : 0);
-

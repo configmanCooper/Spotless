@@ -1,6 +1,6 @@
 {
   "name": "spotless",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "description": "SPOTLESS — a narrator-driven puzzle game about a house robot named Dust.",
   "type": "module",

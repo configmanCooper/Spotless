@@ -1,5 +1,13 @@
 # SPOTLESS — Changelog
 
+## v5 — Showroom Backstage Enclosure
+
+- Enclosed the showroom breaker and mess dispenser behind a continuous
+  backstage wall.
+- Made the staff door the only route into the backstage area.
+- Added navigation regression coverage proving both targets are unreachable
+  until the staff door opens.
+
 ## v4 — Solution Debug Checklist
 
 - Added `?debug=1`, a scrollable upper-right real-solution checklist.
