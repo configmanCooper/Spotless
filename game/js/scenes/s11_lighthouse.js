@@ -293,13 +293,14 @@ export default function makeScene() {
       api.narrator.mode = 'spatial';
       // ground the voice at the old robot by the light (Phase 1 spatial hookup)
       try { api.spatialSource(this._ash.getWorldPosition(new THREE.Vector3())); } catch {}
-      if (api.memory.get('gaveBarcode')) api.narrator.say('s11_barcode_beat', { category: 'STORY', spatial: true });
-      api.narrator.say('s11_c5_cradle_beat', { category: 'STORY', spatial: true });
       this._ash.rotation.y = 0;
-      api.narrator.say('s11_reveal', { category: 'STORY', spatial: true });
-      api.narrator.say('s11_a1', { category: 'STORY', spatial: true });
-      api.narrator.say('s11_a2', { category: 'STORY', spatial: true });
-      api.narrator.say('s11_a3', { category: 'STORY', spatial: true, onDone: () => this._offerSpeck(api) });
+      const reveal = [];
+      if (api.memory.get('gaveBarcode')) reveal.push('s11_barcode_beat');
+      reveal.push('s11_c5_cradle_beat', 's11_reveal', 's11_a1', 's11_a2', 's11_a3');
+      api.narrator.saySequence(reveal, {
+        lineOpts: { category: 'STORY', spatial: true },
+        onDone: () => this._offerSpeck(api),
+      });
     },
 
     _offerSpeck(api) {

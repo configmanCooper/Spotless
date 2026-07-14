@@ -349,9 +349,9 @@ async function solveTower(h, walkAway) {
   h.tap('c5_trickle');
   h.world.lampOn = true; h.pump(0.3);                     // lamp on → c5_lampon
   h.tap('c5_cradle');                                     // ignite → reveal
-  h.pump(45);                                             // spatial reveal lines → speck offered
+  h.pumpUntil(() => !!h.ent('speck'), 120);               // ordered spatial reveal → speck offered
   if (walkAway) { h.goto(0, 46); h.pump(3); } else { h.cleanEnt('speck'); }
-  h.pump(25);                                             // ending line → solve + credits
+  h.pumpUntil(() => h.solved, 60);                        // ending line → solve + credits
 }
 
 async function run() {

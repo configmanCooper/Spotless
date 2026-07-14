@@ -5,12 +5,17 @@ import * as THREE from 'three';
 
 const _mats = new Map();
 export function mat(hex, opts = {}) {
-  const key = hex + '|' + (opts.rough ?? 1) + '|' + (opts.emissive ?? 0) + '|' + (opts.flat ? 1 : 0);
+  const rough = opts.rough ?? 0.92;
+  const metal = opts.metal ?? 0.0;
+  const emissive = opts.emissive ?? 0x000000;
+  const emissiveIntensity = opts.emissiveIntensity ?? 1;
+  const flat = opts.flat ?? true;
+  const key = [hex, rough, metal, emissive, emissiveIntensity, flat ? 1 : 0].join('|');
   if (_mats.has(key)) return _mats.get(key);
   const m = new THREE.MeshStandardMaterial({
-    color: hex, roughness: opts.rough ?? 0.92, metalness: opts.metal ?? 0.0,
-    emissive: opts.emissive ?? 0x000000, emissiveIntensity: opts.emissiveIntensity ?? 1,
-    flatShading: opts.flat ?? true,
+    color: hex, roughness: rough, metalness: metal,
+    emissive, emissiveIntensity,
+    flatShading: flat,
   });
   m.userData.shared = true;       // cached + reused across scenes; never dispose
   _mats.set(key, m);

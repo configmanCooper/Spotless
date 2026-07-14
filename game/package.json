@@ -7,6 +7,16 @@
   "scripts": {
     "start": "node server.cjs",
     "test": "node --no-warnings --loader ./test/loader.mjs test/run.js",
-    "smoke": "node test/smoke.cjs"
+    "test:core": "node --no-warnings --loader ./test/loader.mjs test/core-regressions.mjs",
+    "test:checkpoints": "node --no-warnings --loader ./test/loader.mjs test/checkpoints.mjs",
+    "test:nav": "node --no-warnings --loader ./test/loader.mjs test/navreach.mjs",
+    "test:replay": "node test/replay.cjs",
+    "test:scenes": "node test/scenesweep.cjs",
+    "test:lifecycle": "node test/lifecycle.cjs",
+    "smoke": "node test/smoke.cjs",
+    "test:all": "npm test && npm run test:core && npm run test:checkpoints && npm run test:nav && npm run test:replay && npm run test:scenes && npm run test:lifecycle && npm run smoke"
+  },
+  "devDependencies": {
+    "playwright-core": "1.61.1"
   }
 }

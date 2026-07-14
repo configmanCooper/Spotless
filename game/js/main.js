@@ -87,6 +87,22 @@ class Game {
   }
 
   _disposeGroup(group) { try { disposeGroup(group); } catch {} }
+  _teardownScene() {
+    this.world && this.world.clearCarry({ dispose: true });
+    if (this.group) {
+      this.renderer.scene.remove(this.group);
+      this._disposeGroup(this.group);
+    }
+    this.group = null;
+    this.scene = null;
+    this.api = null;
+    this.interact.clear();
+    this.nav.clear();
+  }
+  _resetNarratorMode() {
+    this.narrator.mode = 'narrator';
+    this.audio.clearSpatial();
+  }
 
   // ---- Examine / Observe overlay (plan §2) ----
   _examine(content) {
@@ -110,7 +126,10 @@ class Game {
   _startNew() {
     this.state.scene = 's00_party'; this.state.scenesDone = []; this.state.flags = {};
     this.state.linesHeard = []; this.narrator.setHeard([]);   // fresh narration on New Game
-    if (this.state.checkpoint) delete this.state.checkpoint;
+    this.state.memoryLog = []; this.narrator.log = [];
+    this.state.solveTimes = {};
+    this.state.checkpoint = null;
+    this._resetNarratorMode();
     this.save.save(this.state); this._begin(this.state.scene);
   }
   _continue() { this._begin(this.state.scene || 's00_party'); }
@@ -127,6 +146,7 @@ class Game {
 
   _begin(id) {
     this.ui.hideTitle(); this.ui.hidePause();
+    this.input.enabled = true;
     this.audio.resume();
     this.ui.setHudVisible(true);
     this.loadScene(id);
@@ -134,11 +154,11 @@ class Game {
 
   loadScene(id) {
     // tear down previous — remove AND dispose GPU resources (plan §3: disposal)
-    if (this.group) { this.renderer.scene.remove(this.group); this._disposeGroup(this.group); }
-    this.interact.clear(); this.nav.clear();
+    this._teardownScene();
     this.narrator.reset();
+    this._resetNarratorMode();
     this.renderer.setAmbient(1);
-    this.audio.clearSpatial();
+    this.input.enabled = true;
     this.world.enabled = true; this.world.lampOn = false; this.world.setLampKnown(false);
     this.world.rig.lampLight.intensity = 0; this.world.setScreen('CLEANING…');
     this.world.resetLamp();
@@ -240,16 +260,25 @@ class Game {
     const entry = SCENES[idx];
     const next = SCENES[idx + 1];
     if (!next) { return; } // finale handles credits itself
+    this.mode = 'interlude';
+    this.input.enabled = false;
+    this.world.enabled = false;
     this.ui.fade(true);
-    const go = () => setTimeout(() => this.loadScene(next.id), 900);
+    let finished = false;
+    let safety = null;
+    const go = () => {
+      if (finished) return;
+      finished = true;
+      if (safety) clearTimeout(safety);
+      setTimeout(() => this.loadScene(next.id), 900);
+    };
     if (entry.interludeAfter) {
       // short black interlude with a "friend of mine" monologue (§4)
       setTimeout(() => {
         this.narrator.reset();
         this.narrator.say(entry.interludeAfter, { category: 'STORY', onDone: go });
         // safety: advance even if line missing
-        setTimeout(go, 9000);
-        this._interludeGuard = true;
+        safety = setTimeout(go, 9000);
       }, 900);
     } else go();
   }
@@ -300,8 +329,13 @@ class Game {
     );
   }
   _quitToTitle() {
-    this.ui.hidePause(); this.save.save(this.state);
-    if (this.group) this.renderer.scene.remove(this.group);
+    this.ui.hidePause();
+    this.input.enabled = true;
+    this.world.enabled = false;
+    this.narrator.reset();
+    this._resetNarratorMode();
+    this._teardownScene();
+    this.save.save(this.state);
     this.mode = 'title'; this._showTitle();
   }
 

@@ -3,7 +3,7 @@
 // decoupled from scene content (§9 scene contract).
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
-import { robot } from './engine/props.js';
+import { disposeGroup, robot } from './engine/props.js';
 
 export class World {
   constructor({ scene, nav, interact, ui, narrator, audio }) {
@@ -116,6 +116,15 @@ export class World {
   dropCarried() {
     if (!this.carry) return false;
     this.drop();
+    return true;
+  }
+  clearCarry({ dispose = false } = {}) {
+    if (!this.carry) return false;
+    const { entity, mesh } = this.carry;
+    this.rig.carryAnchor.remove(mesh);
+    entity.carried = false;
+    this.carry = null;
+    if (dispose) disposeGroup(mesh);
     return true;
   }
   // place carried item into a target (consumes it from world)

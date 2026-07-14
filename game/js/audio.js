@@ -42,12 +42,28 @@ export class Audio {
   updateListener(camera) {
     if (!this.ctx || !this.ctx.listener || !camera) return;
     const l = this.ctx.listener;
-    const p = camera.getWorldPosition(new (this._V || (this._V = camera.position.constructor))());
+    const p = camera.getWorldPosition(camera.position.clone());
+    const f = camera.getWorldDirection(camera.position.clone());
+    const u = camera.up;
     const set = (param, v) => { if (param && param.setValueAtTime) param.setValueAtTime(v, this.ctx.currentTime); };
     if (l.positionX) { set(l.positionX, p.x); set(l.positionY, p.y); set(l.positionZ, p.z); }
     else if (l.setPosition) l.setPosition(p.x, p.y, p.z);
+    if (l.forwardX) {
+      set(l.forwardX, f.x); set(l.forwardY, f.y); set(l.forwardZ, f.z);
+      set(l.upX, u.x); set(l.upY, u.y); set(l.upZ, u.z);
+    } else if (l.setOrientation) l.setOrientation(f.x, f.y, f.z, u.x, u.y, u.z);
   }
-  clearSpatial() { this.spatialNode = null; }
+  clearSpatial() {
+    for (const el of this.voCache.values()) {
+      if (!el || !el._srcNode) continue;
+      try { el._srcNode.disconnect(); el._srcNode.connect(this.ctx.destination); } catch {}
+    }
+    if (this.spatialNode) {
+      try { this.spatialNode.panner.disconnect(); } catch {}
+      try { this.spatialNode.gain.disconnect(); } catch {}
+    }
+    this.spatialNode = null;
+  }
 
   // --- VO ---
   playVO(id, opts = {}) {
@@ -66,7 +82,11 @@ export class Audio {
         this.ensure();
         if (this.ctx && !el._srcNode) {
           try { el._srcNode = this.ctx.createMediaElementSource(el); el._srcNode.connect(this.spatialNode.panner); el.volume = 1; } catch {}
+        } else if (this.ctx && el._srcNode) {
+           try { el._srcNode.disconnect(); el._srcNode.connect(this.spatialNode.panner); el.volume = 1; } catch {}
         }
+      } else if (this.ctx && el._srcNode) {
+        try { el._srcNode.disconnect(); el._srcNode.connect(this.ctx.destination); } catch {}
       }
       const p = el.play();
       p && p.catch(() => {});

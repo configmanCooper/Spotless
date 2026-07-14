@@ -14,6 +14,8 @@ export class Narrator {
     this.cooldowns = new Map();   // id -> time remaining
     this.queue = [];
     this.cur = null;
+    this._seq = 0;
+    this._epoch = 0;
     this.onLine = null;           // optional hook(id)
     this.mode = 'narrator';       // 'narrator' | 'spatial' (S11 reveal)
     this.scene = '';              // current scene id (for the memory log)
@@ -39,6 +41,10 @@ export class Narrator {
   getHeard() { return [...this.heard]; }
   isSpeaking() { return !!this.cur; }
   currentPriority() { return this.cur ? this.cur.priority : -1; }
+  _defer(fn, ms) {
+    const epoch = this._epoch;
+    setTimeout(() => { if (this._epoch === epoch) fn(); }, ms);
+  }
 
   // say(id, {priority, category, once, cooldown, interrupts, speaker, text, spatial})
   say(id, opts = {}) {
@@ -49,11 +55,11 @@ export class Narrator {
     // If a line is skipped (already heard / on cooldown / empty), we must STILL
     // fire onDone — otherwise progression-critical callbacks (scene advance,
     // finale beats) would soft-lock on replay when the line is suppressed.
-    if (once && this.heard.has(id)) { if (opts.onDone) setTimeout(opts.onDone, 300); return false; }
-    if ((this.cooldowns.get(id) || 0) > 0) { if (opts.onDone) setTimeout(opts.onDone, 200); return false; }
+    if (once && this.heard.has(id)) { if (opts.onDone) this._defer(opts.onDone, 300); return false; }
+    if ((this.cooldowns.get(id) || 0) > 0) { if (opts.onDone) this._defer(opts.onDone, 200); return false; }
 
     const text = opts.text ?? line.text ?? '';
-    if (!text) { if (opts.onDone) setTimeout(opts.onDone, 100); return false; }
+    if (!text) { if (opts.onDone) this._defer(opts.onDone, 100); return false; }
     const speaker = opts.speaker || line.speaker || (category === 'VOICE' ? 'voice' : 'narrator');
     const clauses = text.split('|').map(s => s.trim()).filter(Boolean);
     const item = {
@@ -62,6 +68,7 @@ export class Narrator {
       speaker, spatial: opts.spatial || line.spatial || this.mode === 'spatial',
       interrupts: opts.interrupts ?? (priority >= PRIO.REACT),
       onDone: opts.onDone,
+      seq: this._seq++,
     };
 
     // interrupt policy: only interrupt lower-priority, non-STORY current lines,
@@ -70,11 +77,36 @@ export class Narrator {
       this.cur.interruptPending = item;
       return true;
     }
-    // STORY lines jump the queue ahead of REACT/HINT/IDLE
-    if (item.category === 'STORY') this.queue.unshift(item);
-    else this.queue.push(item);
-    this.queue.sort((a, b) => b.priority - a.priority);
+    // Priority wins, but equal-priority lines preserve authored call order.
+    this.queue.push(item);
+    this._sortQueue();
     return true;
+  }
+
+  _sortQueue() {
+    this.queue.sort((a, b) => (b.priority - a.priority) || (a.seq - b.seq));
+  }
+
+  // Play an authored sequence one line at a time. Each line may be an id string
+  // or { id, opts }. The next line is queued only after the prior line finishes,
+  // so callbacks and once-suppressed replay behavior remain deterministic.
+  saySequence(lines, opts = {}) {
+    const list = Array.isArray(lines) ? lines.slice() : [];
+    const epoch = this._epoch;
+    const play = (i) => {
+      if (this._epoch !== epoch) return;
+      if (i >= list.length) { opts.onDone && opts.onDone(); return; }
+      const entry = typeof list[i] === 'string' ? { id: list[i], opts: {} } : list[i];
+      const lineOpts = Object.assign({}, opts.lineOpts || {}, entry.opts || {});
+      const lineDone = lineOpts.onDone;
+      lineOpts.onDone = () => {
+        if (this._epoch !== epoch) return;
+        lineDone && lineDone();
+        play(i + 1);
+      };
+      this.say(entry.id, lineOpts);
+    };
+    play(0);
   }
 
   // convenience: an ad-hoc line not in the script
@@ -100,8 +132,8 @@ export class Narrator {
         // STORY that got interrupted replays from start (§5)
         if (c.category === 'STORY') { c.idx = 0; this.queue.push(c); }
         this._finishCur(false);
-        this.queue.unshift(nxt);
-        this.queue.sort((a, b) => b.priority - a.priority);
+        this.queue.push(nxt);
+        this._sortQueue();
         this._next();
         return;
       }
@@ -143,5 +175,11 @@ export class Narrator {
   }
 
   // hard reset between scenes (keeps heard set)
-  reset() { this.queue.length = 0; if (this.cur) this.audio?.stopVO(this.cur.id); this.cur = null; this.ui.hideSub(); }
+  reset() {
+    this._epoch++;
+    this.queue.length = 0;
+    if (this.cur) this.audio?.stopVO(this.cur.id);
+    this.cur = null;
+    this.ui.hideSub();
+  }
 }

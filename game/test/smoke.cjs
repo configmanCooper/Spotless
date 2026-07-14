@@ -4,7 +4,7 @@
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
-const { chromium } = require(path.join('C:', 'Users', 'rocma', 'CLI', 'Fish-Friends', 'game', 'node_modules', 'playwright-core'));
+const { chromium, launchOptions } = require('./browser.cjs');
 
 const ROOT = path.join(__dirname, '..');
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.mp3': 'audio/mpeg', '.png': 'image/png' };
@@ -22,8 +22,7 @@ function serve() {
 (async () => {
   const server = await serve();
   const port = server.address().port;
-  const exe = chromium.executablePath();
-  const browser = await chromium.launch({ executablePath: process.env.CHROME_EXE || exe, args: ['--use-gl=swiftshader', '--no-sandbox'] });
+  const browser = await chromium.launch(launchOptions());
   const page = await browser.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));

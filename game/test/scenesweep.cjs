@@ -1,11 +1,11 @@
 const path = require('path'); const http = require('http'); const fs = require('fs');
-const { chromium } = require(path.join('C:', 'Users', 'rocma', 'CLI', 'Fish-Friends', 'game', 'node_modules', 'playwright-core'));
+const { chromium, launchOptions } = require('./browser.cjs');
 const ROOT = path.join(__dirname, '..');
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css' };
 function serve() { return new Promise((res) => { const s = http.createServer((rq, rs) => { let p = rq.url.split('?')[0]; if (p === '/') p = '/index.html'; fs.readFile(path.join(ROOT, p), (e, d) => { if (e) { rs.writeHead(404); rs.end(); } else { rs.writeHead(200, { 'Content-Type': TYPES[path.extname(p)] || 'application/octet-stream' }); rs.end(d); } }); }); s.listen(0, () => res(s)); }); }
 (async () => {
   const server = await serve(); const port = server.address().port;
-  const browser = await chromium.launch({ executablePath: process.env.CHROME_EXE, args: ['--use-gl=swiftshader', '--no-sandbox'] });
+  const browser = await chromium.launch(launchOptions());
   const page = await browser.newPage();
   const errs = [];
   page.on('pageerror', e => errs.push(String(e)));
