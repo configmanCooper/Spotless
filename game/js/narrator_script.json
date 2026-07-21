@@ -545,6 +545,7 @@
   "guest_neutral_1": { "category": "VOICE", "speaker": "guest", "cooldown": 10, "text": "Does it ever stop? ...Guess not." },
   "host_2": { "category": "VOICE", "speaker": "host", "cooldown": 7, "text": "DUST! Living room! Chop chop!" },
   "host_3": { "category": "VOICE", "speaker": "host", "cooldown": 7, "text": "Where is that robot? DUST!" },
+  "host_trashfull": { "category": "VOICE", "speaker": "host", "once": true, "text": "Full ALREADY? | Who designs a cleaner with a bin the size of a teacup?! | Ugh — the dumpster's out back. Off you go." },
   "os_1": { "category": "VOICE", "speaker": "os", "cooldown": 8, "text": "Good morning! Today Master comes home. Making toast. Drawing curtains. Fluffing cushions." },
   "os_2": { "category": "VOICE", "speaker": "os", "cooldown": 6, "text": "That door is climate-sealed. Resealing. Everything is fine. Everything is lovely." },
   "os_fire": { "category": "VOICE", "speaker": "os", "cooldown": 4, "text": "SMOKE DETECTED. Opening EVERYTHING. It's the one rule above the routine. Oh dear. Oh dear." },

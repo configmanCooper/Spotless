@@ -40,6 +40,19 @@ export default function makeScene() {
       api.wall(6.5, -4.5, 5, 0.3, pal.wall);  // front-right
       api.wall(0, 0.5, 0.3, 7, pal.wall, 1.2);// interior divider
 
+      // ---- BACK DOOR to the yard (starts CLOSED, blocking the only way out) ----
+      // It opens only once Dust's little trash bin fills up, forcing him outside to
+      // the dumpster (and, beyond it, onto the road). A frame + threshold stay put
+      // when the slab swings away, so the way out stays legible.
+      for (const fx of [1.0, 4.0]) api.prop(P.box(0.14, 2.05, 0.36, 0x3a3226), fx, 1.02, -4.5);      // jambs
+      api.prop(P.box(3.2, 0.16, 0.36, 0x3a3226), 2.5, 2.02, -4.5);                                    // lintel
+      api.prop(P.box(3.0, 0.05, 0.55, 0x2a2732), 2.5, 0.03, -4.5);                                    // threshold
+      this._outDoor = api.door(2.5, -4.5, 2.9, 0.28, 0x5a4a3a, 1.92);
+      const doorPane = P.box(2.1, 0.9, 0.06, 0x20242e, { emissive: 0x2a3550, emissiveIntensity: 0.35, edges: false });
+      doorPane.position.set(0, 0.2, 0.16); this._outDoor.add(doorPane);                               // glass (night outside)
+      const doorKnob = P.box(0.09, 0.09, 0.14, 0xd8c060, { emissive: 0x3a2e08, edges: false });
+      doorKnob.position.set(-1.05, 0, 0.18); this._outDoor.add(doorKnob);
+
       // ---- BIRTHDAY DECORATIONS ----
       // a big HAPPY BIRTHDAY banner on the back wall
       api.prop(P.labelPlaque('★ HAPPY BIRTHDAY ★', 4.2, 0.7, { bg: '#3a2f45', fg: '#ffd777' }), 0, 3.4, 4.82);
@@ -153,6 +166,7 @@ export default function makeScene() {
 
       this._t = 0; this._spawnT = 0; this._barkT = 0;
       this._named = false; this._wistful = false; this._vacuum = false; this._exiting = false;
+      this._trashFullHandled = false;
       api.narrator.say('boot_line', { category: 'STORY' });
     },
 
@@ -222,6 +236,15 @@ export default function makeScene() {
         api.narrator.say(b, { category: 'VOICE' });
       }
 
+      // TRASH FULL: Dust's tiny bin brims → the host gripes about his pitiful storage
+      // and the back door is unlocked so he can carry it out to the dumpster.
+      if (!this._trashFullHandled && api.world.canEmptyTrash && api.world.trash >= 0.999) {
+        this._trashFullHandled = true;
+        if (this._outDoor && this._outDoor.userData.open) this._outDoor.userData.open();
+        api.narrator.say('host_trashfull', { category: 'VOICE' });
+        api.toast('Your bin is full. The back door is open — carry it out to the dumpster.', 4200);
+      }
+
       // OTHER guests comment on the robot cleaning — some kind, some mean
       this._chatterT -= dt;
       if (this._chatterT <= 0) {
@@ -256,6 +279,8 @@ export default function makeScene() {
         // clear the messes for one beat — the vacuum of purpose
         for (const e of this._messes.slice()) { e.mesh.parent && e.mesh.parent.remove(e.mesh); api.interact.remove(e); }
         this._messes.length = 0;
+        // safety net: make sure the way out is open even if the bin never filled
+        if (this._outDoor && this._outDoor.userData.open) this._outDoor.userData.open();
         api.narrator.say('s0_vacuum', { category: 'REACT' });
       }
 
