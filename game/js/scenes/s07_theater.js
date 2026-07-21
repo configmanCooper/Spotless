@@ -35,6 +35,11 @@ export default function makeScene() {
       // footlights along the stage lip (practical stage light)
       for (let i = 0; i < 7; i++) { const fl = P.box(0.2, 0.12, 0.2, 0x14100c, { emissive: 0xffb060, emissiveIntensity: 0.7, edges: false }); api.prop(fl, -6 + i * 2, 0.34, -1.5); }
       const footGlow = new THREE.PointLight(0xffb060, 1.2, 12, 1.6); footGlow.position.set(0, 0.6, -2); api.group.add(footGlow);
+      // dim theatre "work lights" in the wings so props read without flooding the
+      // dramatic stage — a low, cool wash the way a house looks before curtain
+      const workL = new THREE.PointLight(0xbfc4e0, 1.0, 18, 1.3); workL.position.set(-7, 5, 4); api.group.add(workL);
+      const workR = new THREE.PointLight(0xbfc4e0, 1.0, 18, 1.3); workR.position.set(7, 5, 4); api.group.add(workR);
+      const houseAmb = new THREE.PointLight(0xd8c0b0, 0.85, 26, 1.1); houseAmb.position.set(0, 6, 2); api.group.add(houseAmb);
       const spotCircle = new THREE.Mesh(new THREE.CircleGeometry(1.4, 24), new THREE.MeshStandardMaterial({ color: 0x2a2418, emissive: 0x000000, roughness: 0.6 }));
       spotCircle.rotation.x = -Math.PI / 2; api.prop(spotCircle, 0, 0.32, -2.5); this._circle = spotCircle;
       this._spot = new THREE.SpotLight(0xfff2c0, 0, 14, Math.PI / 7, 0.5); this._spot.position.set(0, 8, -2.5);

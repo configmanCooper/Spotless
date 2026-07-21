@@ -78,7 +78,7 @@ export const PALETTES = {
   carehome:   { accent: 0xe8b7a0, warm: 0xe6d3c0, ground: 0x2b241f, fog: 0x161009,
                 rig: { hemi: 0.8, key: 0.8, fill: 0.35, sky: 0xffe6d2, keyColor: 0xffd7b8, fillColor: 0x9a8b7f, keyPos: [5, 12, 6], fog: [20, 46], exposure: 1.14 } },
   theater:    { accent: 0xd9435b, warm: 0xf0c98a, ground: 0x171015, fog: 0x0a060a,
-                rig: { hemi: 0.28, key: 0.4, fill: 0.16, sky: 0xf0c0c8, keyColor: 0xf0b8c0, fillColor: 0x5a3a52, keyPos: [0, 15, 5], fog: [14, 40], exposure: 1.02 } },
+                rig: { hemi: 0.5, key: 0.68, fill: 0.26, sky: 0xf0c0c8, keyColor: 0xf0b8c0, fillColor: 0x5a3a52, keyPos: [0, 15, 5], fog: [16, 42], exposure: 1.14 } },
   scrapyard:  { accent: 0xffa64b, warm: 0xd9843e, ground: 0x241d16, fog: 0x120d08,
                 rig: { hemi: 0.5, key: 0.85, fill: 0.22, sky: 0xffcf9a, keyColor: 0xffb063, fillColor: 0x7a5a3a, keyPos: [-5, 13, 6], fog: [16, 42], exposure: 1.1 } },
   repair:     { accent: 0x9ad1c0, warm: 0xc7d6cf, ground: 0x1c2320, fog: 0x0d1210,
